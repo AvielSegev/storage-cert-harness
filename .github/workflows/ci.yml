@@ -28,16 +28,14 @@ jobs:
     uses: ./.github/workflows/ci-build.yml
 
   smoke:
-    if: vars.REPLAY_SMOKE_ENABLED == 'true'
+    # Opt-in only (set vars.CI_RUN_REPLAY_SMOKE=true). Not a CI gate.
+    if: ${{ vars.CI_RUN_REPLAY_SMOKE == 'true' }}
     needs: [build]
     uses: ./.github/workflows/ci-smoke.yml
 
   images:
-    if: >-
-      always() &&
-      needs.build.result == 'success' &&
-      (needs.smoke.result == 'success' || needs.smoke.result == 'skipped')
-    needs: [build, smoke]
+    if: always() && needs.build.result == 'success'
+    needs: [build]
     uses: ./.github/workflows/ci-images.yml
 
   publish:
