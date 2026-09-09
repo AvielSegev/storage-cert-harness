@@ -1,0 +1,465 @@
+{
+  "provenance": {
+    "generated_date": "2026-09-09",
+    "kb_commit_date": "2026-09-09",
+    "kb_git_commit": "66a4b8f0eccb1cb2184d99ba5f788aff59800b9a"
+  },
+  "schema_version": "2.0",
+  "test_requirements": [
+    {
+      "automation_tool": "virtbench fio",
+      "category": "Data path",
+      "checks": [],
+      "checks_count": 0,
+      "checks_status": "to-be-validated",
+      "description": "Provision several VMs with data disks on the storage class under test. While a background load holds the array at ~80% of its measured maximum IOPS, run an identical 4K random read/write FIO job inside each VM, then take the 99th-percentile completion latency across the VMs.",
+      "id": "TR-STOR-002",
+      "params": {
+        "fio_bs": {
+          "default": "4k"
+        },
+        "num_vms": {
+          "default": 10
+        },
+        "profile": {}
+      },
+      "partner_level": 3,
+      "sla": [
+        {
+          "measured_by": [
+            "virtbench fio"
+          ],
+          "metric": "read_latency",
+          "percentile": "p99",
+          "type": "latency",
+          "unit": "ms"
+        },
+        {
+          "measured_by": [
+            "virtbench fio"
+          ],
+          "metric": "write_latency",
+          "percentile": "p99",
+          "type": "latency",
+          "unit": "ms"
+        }
+      ],
+      "sla_count": 2,
+      "sla_status": "defined",
+      "title": "TR-STOR-002: FIO Storage IO Performance",
+      "verified": "accepted"
+    },
+    {
+      "automation_tool": "kube-burner-ocp pvc-density",
+      "category": "Control path",
+      "checks": [
+        {
+          "expectation": "all 1000 PVCs reach Bound without provisioner backlog or failure",
+          "id": "pvc-1000-bound",
+          "kind": "suite",
+          "name": "1000 PVCs provisioned and bound",
+          "suite": "kube-burner-ocp pvc-density (1000 PVCs)"
+        }
+      ],
+      "checks_count": 1,
+      "checks_status": "defined",
+      "description": "Create PVCs (with pods) on the storage class and confirm all reach Bound; measure PVC bind latency and take the p99.",
+      "id": "TR-STOR-006",
+      "params": {
+        "claim_size": {
+          "default": "1Gi"
+        },
+        "iterations": {
+          "default": 1000,
+          "required": true
+        },
+        "workload": {
+          "default": "pvc-density"
+        }
+      },
+      "partner_level": 3,
+      "sla": [
+        {
+          "measured_by": [
+            "kube-burner-ocp pvc-density"
+          ],
+          "metric": "pvc_bind_latency",
+          "percentile": "p99",
+          "type": "latency",
+          "unit": "s"
+        }
+      ],
+      "sla_count": 1,
+      "sla_status": "defined",
+      "title": "TR-STOR-006: PVC Density and Provisioning",
+      "verified": "accepted"
+    },
+    {
+      "automation_tool": "virtbench datasource-clone --boot-storm",
+      "category": "Scale",
+      "checks": [],
+      "checks_count": 0,
+      "checks_status": "to-be-validated",
+      "description": "Create the VMs in a stopped state, then power them all on together so the storage attach path is hit simultaneously. Measure how long until all VMs are Running, and the 99th-percentile per-VM time-to-Running.",
+      "id": "TR-VIRT-001",
+      "params": {
+        "disk_size": {
+          "default": "10Gi"
+        },
+        "num_vms": {
+          "default": 100,
+          "required": true
+        }
+      },
+      "partner_level": 3,
+      "sla": [
+        {
+          "measured_by": [
+            "virtbench datasource-clone --boot-storm"
+          ],
+          "metric": "vm_boot_time",
+          "type": "duration"
+        }
+      ],
+      "sla_count": 1,
+      "sla_status": "defined",
+      "title": "TR-VIRT-001: Cold VM Boot Storm Performance at Scale",
+      "verified": "accepted"
+    },
+    {
+      "automation_tool": "kube-burner-ocp virt-migration",
+      "category": "Scale",
+      "checks": [
+        {
+          "description": "Native completeness check emitted by kube-burner-ocp virt-migration: all migration jobs passed.",
+          "expectation": "Every VM completes live migration with no kube-burner-ocp job failures",
+          "id": "jobs_passed",
+          "kind": "capability",
+          "name": "All VMs migrated successfully",
+          "status": "defined"
+        }
+      ],
+      "checks_count": 1,
+      "checks_status": "defined",
+      "description": "Validates that 50 VMs can be live-migrated simultaneously within the SLA window. The implementation uses kube-burner-ocp's virt-migration workload, which pins all VMs to a single worker node, then issues parallel migration requests to move them off.",
+      "id": "TR-VIRT-004",
+      "params": {
+        "concurrency": {
+          "default": 20,
+          "required": true
+        }
+      },
+      "partner_level": 3,
+      "sla": [
+        {
+          "measured_by": [
+            "kube-burner-ocp virt-migration"
+          ],
+          "metric": "total_migration_duration",
+          "type": "duration",
+          "unit": "min"
+        }
+      ],
+      "sla_count": 1,
+      "sla_status": "defined",
+      "title": "TR-VIRT-004: Parallel VM Live Migration",
+      "verified": "accepted"
+    },
+    {
+      "automation_tool": "virtbench failure-recovery",
+      "category": "Life-cycle",
+      "checks": [
+        {
+          "description": "node timeout 600s, recovery timeout 600s",
+          "expectation": "all VMs recover to Running+Ready on surviving nodes; ping restored",
+          "id": "node-failure-vm-recovery",
+          "kind": "scenario",
+          "name": "Node-failure VM recovery",
+          "status": "defined",
+          "steps": [
+            "Inject node failure (passive monitor | BMC/IPMI power-off | FenceAgentsRemediation)",
+            "Detect node NotReady",
+            "Volume re-attaches and VMs restart on surviving nodes",
+            "Verify Running+Ready and ping recovery per VM"
+          ]
+        },
+        {
+          "description": "Known pitfalls: Infinidat /dev/mapper/WWID udev race (>61s mount); ~9s iSCSI device rescan; Dell CSI requires the Resiliency Module installed.",
+          "expectation": "volume detaches from the failed node and re-attaches on the surviving node without driver races or long device rescans",
+          "expected": "supported",
+          "feature": "failover-reattach",
+          "id": "reattach-failure-modes",
+          "kind": "capability",
+          "name": "Volume re-attach on failover is prompt and correct",
+          "status": "defined"
+        }
+      ],
+      "checks_count": 2,
+      "checks_status": "defined",
+      "description": "Cause an unplanned failure of a node running VMs, then measure the time until the VM's volume detaches from the failed node, re-attaches on a surviving node, and the VM restarts. Watch the re-attach path for driver races or long device rescans; some drivers require an additional resiliency/fencing module.",
+      "id": "TR-VIRT-007",
+      "params": {
+        "mode": {
+          "default": "monitor"
+        },
+        "node": {
+          "required": true
+        }
+      },
+      "partner_level": 3,
+      "sla": [
+        {
+          "measured_by": [
+            "virtbench failure-recovery"
+          ],
+          "metric": "vm_ha_restart_time",
+          "type": "duration",
+          "unit": "s"
+        }
+      ],
+      "sla_count": 1,
+      "sla_status": "defined",
+      "title": "TR-VIRT-007: VM HA Restart After Node Failure",
+      "verified": "accepted"
+    },
+    {
+      "automation_tool": "virtbench vm-ops drain-nodes",
+      "category": "Life-cycle",
+      "checks": [
+        {
+          "description": "online & offline expansion; capacity grows, data preserved",
+          "expectation": "Every VM running on the drained worker is Running on a different node after the drain (none shut down or left behind)",
+          "id": "all-vms-evacuated",
+          "kind": "capability",
+          "name": "All VMs evacuated the drained node"
+        }
+      ],
+      "checks_count": 1,
+      "checks_status": "defined",
+      "description": "Place ~50 VMs on a node, drain the node, and confirm all VMs evacuate (live-migrate off) within the time limit. A variant runs the drain with the VMs under active storage I/O (dirty-io profile).",
+      "id": "TR-VIRT-008",
+      "params": {
+        "num_vms": {
+          "default": 50,
+          "required": true
+        }
+      },
+      "partner_level": 3,
+      "sla": [
+        {
+          "measured_by": [
+            "virtbench vm-ops drain-nodes"
+          ],
+          "metric": "evacuation_time",
+          "type": "duration",
+          "unit": "min"
+        }
+      ],
+      "sla_count": 1,
+      "sla_status": "defined",
+      "title": "TR-VIRT-008: Node Drain Performance",
+      "verified": "accepted"
+    },
+    {
+      "automation_tool": "kube-burner (volumeSnapshotLatency)",
+      "category": "Control path",
+      "checks": [],
+      "checks_count": 0,
+      "checks_status": "to-be-validated",
+      "description": "On the storage class under test, create a snapshot of a VM (or its volume) and measure the time from request until the snapshot reports ready-to-use; repeat across a batch and take the p99.",
+      "id": "TR-VIRT-010",
+      "params": {
+        "disk_size": {
+          "default": "10Gi"
+        },
+        "max_wait": {
+          "default": "1h"
+        },
+        "namespace": {
+          "default": "kb-snap"
+        },
+        "replicas": {
+          "required": true
+        },
+        "snapshot_count": {
+          "required": true
+        },
+        "vm_image": {
+          "default": "quay.io/yblum/tiny_image:latest"
+        }
+      },
+      "partner_level": 3,
+      "sla": [
+        {
+          "measured_by": [
+            "kube-burner (volumeSnapshotLatency)"
+          ],
+          "metric": "snapshot_ready_time",
+          "percentile": "p99",
+          "type": "latency",
+          "unit": "s"
+        }
+      ],
+      "sla_count": 1,
+      "sla_status": "defined",
+      "title": "TR-VIRT-010: VM Snapshot at Scale",
+      "verified": "accepted"
+    },
+    {
+      "automation_tool": "virtbench datasource-clone --single-node",
+      "category": "Scale",
+      "checks": [],
+      "checks_count": 0,
+      "checks_status": "to-be-validated",
+      "description": "Pin VMs onto one worker node and increase the number of VMs — and the number of disks per VM — until scheduling or volume attach fails. Record the maximum VMs and maximum attached volumes the node sustained, and publish those numbers.",
+      "id": "TR-VIRT-013",
+      "params": {
+        "attempt_vms": {
+          "default": 100
+        },
+        "node_name": {
+          "default": ""
+        },
+        "num_disks": {
+          "default": 1
+        }
+      },
+      "partner_level": 3,
+      "sla": [
+        {
+          "measured_by": [
+            "virtbench datasource-clone --single-node"
+          ],
+          "metric": "max_vms_per_node",
+          "type": "count",
+          "unit": "count"
+        },
+        {
+          "measured_by": [
+            "virtbench datasource-clone --single-node"
+          ],
+          "metric": "max_luns_per_node",
+          "type": "count",
+          "unit": "count"
+        }
+      ],
+      "sla_count": 2,
+      "sla_status": "defined",
+      "title": "TR-VIRT-013: Per-Node Scale Ceiling (VMs + Volumes/LUNs)",
+      "verified": "accepted"
+    },
+    {
+      "automation_tool": "virtbench datasource-clone --num-disks 2",
+      "category": "Control path",
+      "checks": [],
+      "checks_count": 0,
+      "checks_status": "to-be-validated",
+      "description": "From a base volume, create 100 VM clones (snapshot- or CSI-clone backed) and measure the clone-provisioning time; take the p99. Confirm the clone method used is snapshot/CSI, not host-assisted.",
+      "id": "TR-VIRT-018",
+      "params": {
+        "iteration_clones": {
+          "default": 100,
+          "required": true
+        },
+        "use_snapshot": {
+          "default": true
+        }
+      },
+      "partner_level": 3,
+      "sla": [
+        {
+          "measured_by": [
+            "virtbench datasource-clone --num-disks 2"
+          ],
+          "metric": "clone_duration",
+          "percentile": "p99",
+          "type": "latency",
+          "unit": "s"
+        }
+      ],
+      "sla_count": 1,
+      "sla_status": "defined",
+      "title": "TR-VIRT-018: VM Cloning at Scale",
+      "verified": "accepted"
+    },
+    {
+      "automation_tool": "kube-burner-ocp virt-parallel",
+      "category": "Life-cycle",
+      "checks": [
+        {
+          "description": "Composite soak/stress gate — the only test exercising concurrent snapshot+migrate+resize storage-load overlap. Binary pass.",
+          "expectation": "the full create/resize/restart/snapshot/migrate/delete lifecycle completes for 20 VMs in parallel without failure or collapse",
+          "id": "parallel-lifecycle-20",
+          "kind": "scenario",
+          "name": "Full VM lifecycle for 20 VMs in parallel",
+          "steps": [
+            "Create 20 VMs with DataVolumes",
+            "Resize volumes",
+            "Restart VMs",
+            "Snapshot VMs",
+            "Migrate VMs from a random node",
+            "Delete all"
+          ]
+        }
+      ],
+      "checks_count": 1,
+      "checks_status": "defined",
+      "description": "For 20 VMs in parallel, run the full lifecycle — create, resize, restart, snapshot, live-migrate, delete — and confirm it completes without failures within the time limit.",
+      "id": "TR-VIRT-019",
+      "params": {
+        "vms": {
+          "default": 20,
+          "required": true
+        }
+      },
+      "partner_level": 3,
+      "sla": [
+        {
+          "measured_by": [
+            "kube-burner-ocp virt-parallel"
+          ],
+          "metric": "lifecycle_completion_time",
+          "type": "duration",
+          "unit": "min"
+        }
+      ],
+      "sla_count": 1,
+      "sla_status": "defined",
+      "title": "TR-VIRT-019: Parallel VM Lifecycle at Progressive Scale",
+      "verified": "accepted"
+    },
+    {
+      "automation_tool": "kube-burner (volumeSnapshotLatency, single-source replicas=250)",
+      "category": "Control path",
+      "checks": [],
+      "checks_count": 0,
+      "checks_status": "to-be-validated",
+      "description": "Create a single volume, then create 250 snapshots of that same volume, keeping them all live at once, and confirm every snapshot reaches ready-to-use.",
+      "id": "TR-VIRT-027",
+      "params": {
+        "snapshots": {
+          "default": 250,
+          "required": true
+        },
+        "source_replicas": {
+          "default": 1
+        }
+      },
+      "partner_level": 3,
+      "sla": [
+        {
+          "measured_by": [
+            "kube-burner (volumeSnapshotLatency, single-source replicas=250)"
+          ],
+          "metric": "snapshots_per_volume",
+          "type": "count",
+          "unit": "count"
+        }
+      ],
+      "sla_count": 1,
+      "sla_status": "defined",
+      "title": "TR-VIRT-027: Snapshot Depth Per Volume",
+      "verified": "accepted"
+    }
+  ]
+}
