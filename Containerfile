@@ -66,5 +66,8 @@ RUN mkdir -p /home/harness/.config /home/harness/.local/share/containers \
   && chown -R 65532:65532 /opt/virtbench-runtime /home/harness
 ENV PATH="/opt/virtbench-venv/bin:${PATH}"
 ENV HOME=/home/harness
-USER 65532:65532
+# The harness writes reports and tool artifacts to operator-provided bind mounts.
+# Rootless engines map this root user to the invoking host user, while rootful
+# engines can write mounts owned by arbitrary host UIDs.
+USER 0
 ENTRYPOINT ["/usr/local/bin/container-entrypoint.sh"]

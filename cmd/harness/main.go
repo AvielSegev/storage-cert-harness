@@ -314,13 +314,14 @@ func newRunCmd() *cobra.Command {
 			}
 			rc := &core.RunCtx{RunID: runID, WorkDir: workdir, Logger: logger, Backend: resolved}
 
-			rep, err := orchestrator.Run(ctx, cfg, trs, cat.Provenance, cat.SchemaVersion, rc)
-			if err != nil {
-				return err
+			if outputDir != "" {
+				if err := os.MkdirAll(outputDir, 0o755); err != nil {
+					return err
+				}
 			}
 
-			// Optionally continue from a prior report: reuse its environment (no
-			// second collection) and merge this run's verdicts into it. See ADR-0014.
+			// Resolve the prior report and self attestations before running cluster
+			// tests, so the human gate is the first run phase.
 			var prior *core.Report
 			if continueFrom != "" {
 				p, err := report.ReadJSON(continueFrom)
@@ -333,7 +334,38 @@ func newRunCmd() *cobra.Command {
 				}
 				prior = &p
 			}
+			var attestations []core.Attestation
+			switch {
+			case prior != nil && len(prior.Attestations) > 0:
+				logger.Info("continue-from: inheriting attestations from prior report", "count", len(prior.Attestations))
+			case attestationsPath != "":
+				atts, err := loadAttestations(attestationsPath)
+				if err != nil {
+					return err
+				}
+				attestations = atts
+			case noAttestations:
+			case isInteractive(os.Stdin):
+				qs, err := attestation.LoadQuestions(attnQuestions)
+				if err != nil {
+					return err
+				}
+				atts, err := attestation.Prompt(ctx, qs, os.Stdin, cmd.ErrOrStderr())
+				if err != nil {
+					return err
+				}
+				attestations = atts
+			default:
+				logger.Warn("no attestations provided and not interactive; skipping (use --attestations or --no-attestations to silence)")
+			}
 
+			rep, err := orchestrator.Run(ctx, cfg, trs, cat.Provenance, cat.SchemaVersion, rc)
+			if err != nil {
+				return err
+			}
+
+			// Optionally continue from a prior report: reuse its environment (no
+			// second collection) and merge this run's verdicts into it. See ADR-0014.
 			// Enrich the report with the run environment (auto-collected from the
 			// cluster). Best-effort; see ADR-0014. The CSI driver is resolved from the
 			// StorageClass under test (the active backend), not the cluster default.
@@ -357,42 +389,7 @@ func newRunCmd() *cobra.Command {
 				}
 			}
 
-			// Resolve attestations (self-reported, unobservable claims). Precedence:
-			// inherited from the prior report (never re-asked) → --attestations file →
-			// --no-attestations (silent skip) → interactive prompt on a TTY → skip with
-			// a warning when non-interactive. See ADR-0014.
-			switch {
-			case prior != nil && len(prior.Attestations) > 0:
-				logger.Info("continue-from: inheriting attestations from prior report", "count", len(prior.Attestations))
-			case attestationsPath != "":
-				atts, err := loadAttestations(attestationsPath)
-				if err != nil {
-					return err
-				}
-				rep.Attestations = atts
-			case noAttestations:
-				// silent skip
-			case isInteractive(os.Stdin):
-				qs, err := attestation.LoadQuestions(attnQuestions)
-				if err != nil {
-					return err
-				}
-				atts, err := attestation.Prompt(ctx, qs, os.Stdin, cmd.ErrOrStderr())
-				if err != nil {
-					return err
-				}
-				rep.Attestations = atts
-				if outputDir != "" && len(atts) > 0 {
-					if err := os.MkdirAll(outputDir, 0o755); err != nil {
-						return err
-					}
-					if err := attestation.WriteFile(filepath.Join(outputDir, "attestations.json"), atts); err != nil {
-						return err
-					}
-				}
-			default:
-				logger.Warn("no attestations provided and not interactive; skipping (use --attestations or --no-attestations to silence)")
-			}
+			rep.Attestations = attestations
 
 			if prior != nil {
 				merged, err := report.Merge(*prior, rep)
@@ -403,8 +400,10 @@ func newRunCmd() *cobra.Command {
 			}
 
 			if outputDir != "" {
-				if err := os.MkdirAll(outputDir, 0o755); err != nil {
-					return err
+				if len(attestations) > 0 && attestationsPath == "" {
+					if err := attestation.WriteFile(filepath.Join(outputDir, "attestations.json"), attestations); err != nil {
+						return err
+					}
 				}
 				if err := writeFile(filepath.Join(outputDir, "report.json"), func(f *os.File) error { return report.WriteJSON(f, rep) }); err != nil {
 					return err
