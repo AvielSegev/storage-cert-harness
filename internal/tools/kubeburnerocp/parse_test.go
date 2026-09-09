@@ -99,16 +99,16 @@ func mustRead(t *testing.T, workload, name string) []byte {
 	return b
 }
 
-// secret-scan:ok -- synthetic gates and scale values exercise grading, not certification limits.
+// synthetic gates and scale values exercise grading, not certification limits.
 func TestPVCDensityCatalogGrading(t *testing.T) {
 	data := readFixtures(t, "pvc-density", "jobSummary.json", "pvcLatencyQuantilesMeasurement-pvc-density.json")
-	// secret-scan:ok -- fake unit-test gate in seconds.
+	// fake unit-test gate in seconds.
 	gate := 2.0
 	tr := core.TestRequirement{ID: "TR-STOR-006", AutomationTool: "kube-burner-ocp pvc-density",
-		// secret-scan:ok -- fixture workload size and illustrative catalog default.
+		// fixture workload size and illustrative catalog default.
 		Params: map[string]any{"iterations": 5}, ParamSpec: map[string]core.ParamSpec{"iterations": {Default: 10}},
 		SLAs: []core.SLA{{Metric: "pvc_bind_latency", Percentile: "p99", Unit: "s"}},
-		// secret-scan:ok -- fake gate applicability matches the fixture.
+		// fake gate applicability matches the fixture.
 		Bars:   []core.SLA{{Metric: "pvc_bind_latency", Percentile: "p99", Unit: "s", Operator: "<=", Value: &gate, When: map[string]any{"iterations": 5}}},
 		Checks: []core.Check{{ID: pvcBoundCheck, Kind: "suite"}}}
 	for _, tc := range []struct {
@@ -117,11 +117,11 @@ func TestPVCDensityCatalogGrading(t *testing.T) {
 		failedJob          bool
 		wantSLA, wantCheck core.Outcome
 	}{
-		// secret-scan:ok -- synthetic pass/fail boundaries around the fixture's one-second latency.
+		// synthetic pass/fail boundaries around the fixture's one-second latency.
 		{"pass", 2, false, core.OutcomePass, core.OutcomePass},
-		// secret-scan:ok -- synthetic fail boundary.
+		// synthetic fail boundary.
 		{"latency failure", 0.5, false, core.OutcomeFail, core.OutcomePass},
-		// secret-scan:ok -- synthetic successful latency with failed workload.
+		// synthetic successful latency with failed workload.
 		{"job failure", 2, true, core.OutcomePass, core.OutcomeFail},
 	} {
 		t.Run(tc.name, func(t *testing.T) {

@@ -45,7 +45,7 @@ spec:
       affinity:
         nodeAffinity:
           preferredDuringSchedulingIgnoredDuringExecution:
-            - weight: 100   # secret-scan:ok  scheduling weight, not a gate
+            - weight: 100   # scheduling weight
               preference:
                 matchExpressions:
                   - key: kubernetes.io/hostname

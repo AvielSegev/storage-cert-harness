@@ -38,8 +38,8 @@ func renderDrainVMTemplate(target string) string {
 const (
 	drainNSPrefix       = "virtbench-drain"
 	drainTemplateFile   = "rhel9-vm-drain.yaml"
-	drainDefaultCount   = 10  // secret-scan:ok  default VM count (a plan input, not a gate)
-	drainDefaultTimeout = 600 // secret-scan:ok  seconds; drain-nodes --timeout default
+	drainDefaultCount   = 10  // default VM count (a plan input)
+	drainDefaultTimeout = 600 // drain-nodes --timeout default (seconds)
 )
 
 // --- Preflight hook ----------------------------------------------------------

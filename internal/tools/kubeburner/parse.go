@@ -142,7 +142,7 @@ func parseResults(trID string, data map[string][]byte, requestedSnapshots int) (
 			core.Metric{Name: MetricSnapshotRequestedCount, Value: float64(requestedSnapshots), Unit: "count"},
 			core.Metric{Name: MetricSnapshotReadyCount, Value: float64(ready), Unit: "count"},
 			core.Metric{Name: MetricSnapshotFailedCount, Value: float64(failed), Unit: "count"},
-			core.Metric{Name: MetricSnapshotSuccessRate, Value: float64(ready) / float64(requestedSnapshots) * 100, Unit: "%"}, // secret-scan:ok percentage conversion, not an SLA
+			core.Metric{Name: MetricSnapshotSuccessRate, Value: float64(ready) / float64(requestedSnapshots) * 100, Unit: "%"},
 		)
 		metrics = append(metrics, core.Metric{Name: MetricSnapshotBatchCompletionTime, Value: elapsed, Unit: "s"})
 	}
@@ -175,7 +175,7 @@ func kubeBurnerPercentile(sorted []float64, percentile float64) int {
 	if len(sorted) == 1 {
 		return int(sorted[0])
 	}
-	index := percentile / 100 * float64(len(sorted)) // secret-scan:ok percentage calculation, not an SLA
+	index := percentile / 100 * float64(len(sorted))
 	if index == float64(int(index)) {
 		return int(sorted[int(index)-1])
 	}

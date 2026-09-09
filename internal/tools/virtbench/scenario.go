@@ -128,7 +128,7 @@ var scenarios = []Scenario{
 		NSPrefix:       "virtbench",
 		BuildArgs:      datasourceCloneArgs(false, "virtbench"),
 		Parse:          ParseSummary,
-		// TR-018's gate is p99 clone provisioning; compute it from the per-VM // secret-scan:ok
+		// TR-018's gate is p99 clone provisioning; compute it from the per-VM
 		// samples (the summary carries only avg/max/min).
 		DetailFile:  DetailCloneFileName,
 		DetailParse: func(data []byte) ([]core.Metric, error) { return ClonePercentiles(data, []string{"p99"}) },

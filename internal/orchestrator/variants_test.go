@@ -41,7 +41,7 @@ func TestVariantsRunAndGradeIndependently(t *testing.T) {
 	probe := &variantProbe{}
 	tool := "variant-probe"
 	registry.Register(stages.ToolIntegration{Name: tool, Runner: probe, ResultParser: probe})
-	// secret-scan:ok — fake workload values and gates exercise conditional grading.
+	// fake workload values and gates exercise conditional grading.
 	small, large, gate := 10.0, 100.0, 50.0
 	tr := core.TestRequirement{ID: "TR-VARIANT", AutomationTool: tool,
 		Params: map[string]any{"load": small, "default": "kept"},

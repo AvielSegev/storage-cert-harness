@@ -14,7 +14,6 @@ func TestSelectMeasurements(t *testing.T) {
 		{ID: "A", SLAs: []core.SLA{{Metric: "latency", Percentile: "p99"}, {Metric: "duration"}}},
 		{ID: "B"},
 	}
-	// secret-scan:ok — synthetic measured value, not a gate.
 	latency := core.Measurement{TR: "A", Name: "latency", Percentile: "p99", Value: 1}
 	otherPercentile := core.Measurement{TR: "A", Name: "latency", Percentile: "p50"}
 	duration := core.Measurement{TR: "A", Name: "duration"}

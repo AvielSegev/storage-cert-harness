@@ -27,7 +27,7 @@ repos:
         entry: ./ci/scripts/secret-scan.sh
         pass_filenames: false
         # yamllint disable-line rule:line-length
-        files: '(internal/(tools|grader)/|plans/|fixtures/|testdata/|\.vscode/|\.cursor/|\.devcontainer/|(^|/)\.env|ci/scripts/secret-scan|ci/config/secret-scan|thresholds\.json|report\.(json|md))'
+        files: '(\.vscode/|\.cursor/|\.devcontainer/|\.code-workspace|(^|/)\.env|ci/scripts/secret-scan|report\.(json|md))'
       # supply-chain.sh is not a pre-commit hook while GitLab allow_failure is on
       # (ECOPROJECT-5419 / govulncheck GO-2026-4602). Re-add when that job is gating:
       #   id: supply-chain

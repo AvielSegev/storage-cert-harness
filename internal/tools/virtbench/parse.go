@@ -199,7 +199,7 @@ func fioRunMetrics(summary fioSummaryFile) []core.Metric {
 		{Name: "vms_total", Value: float64(summary.TotalVMs)},
 		{Name: "vms_successful", Value: float64(summary.Successful)},
 		{Name: "vms_failed", Value: float64(summary.Failed)},
-		{Name: "vm_success_rate", Value: float64(summary.Successful) / float64(summary.TotalVMs) * 100, Unit: "%"}, // secret-scan:ok - derived success percentage, not a certification threshold.
+		{Name: "vm_success_rate", Value: float64(summary.Successful) / float64(summary.TotalVMs) * 100, Unit: "%"},
 	}
 }
 
@@ -370,13 +370,13 @@ func ClonePercentiles(data []byte, pcts []string) ([]core.Metric, error) {
 	return out, nil
 }
 
-// parsePercentile turns a "pNN" label into a 0..1 fraction ("p99" -> 0.99). // secret-scan:ok
+// parsePercentile turns a "pNN" label into a 0..1 fraction ("p99" -> 0.99).
 func parsePercentile(label string) (float64, bool) {
 	n, err := strconv.ParseFloat(strings.TrimPrefix(label, "p"), 64)
-	if err != nil || n <= 0 || n > 100 { // secret-scan:ok
+	if err != nil || n <= 0 || n > 100 {
 		return 0, false
 	}
-	return n / 100, true // secret-scan:ok
+	return n / 100, true
 }
 
 // percentile returns the nearest-rank percentile of an ascending-sorted slice.
@@ -469,7 +469,7 @@ func ParseDrain(data []byte, trID string) ([]core.TestResult, error) {
 		{Name: "vms_total", Value: float64(total)},
 		{Name: "vms_evacuated", Value: float64(evacuated)},
 		{Name: "vms_remaining", Value: float64(remaining)},
-		{Name: "evacuation_success_rate", Value: float64(evacuated) / float64(total) * 100, Unit: "%"}, // secret-scan:ok
+		{Name: "evacuation_success_rate", Value: float64(evacuated) / float64(total) * 100, Unit: "%"},
 	}
 
 	native, checkOutcome := core.OutcomePass, core.OutcomePass

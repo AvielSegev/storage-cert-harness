@@ -12,7 +12,7 @@ import (
 // migrations; its elapsedTime is the mass-migration wall-clock.
 const migrateJobName = "migrate-vms"
 
-// secret-scan:ok -- stable KB check identifier, not a gate.
+// stable KB check identifier.
 const pvcBoundCheck = "pvc-1000-bound"
 
 // jobSummary is one row from jobSummary.json.
