@@ -23,7 +23,7 @@ func (preflight) Check(ctx context.Context, rc *core.RunCtx, bag *core.Bag, trs 
 	var findings []core.Finding
 	findings = append(findings, core.Finding{
 		Level:   "info",
-		Message: fmt.Sprintf("kube-burner-ocp workload=%s image=%s", p.Workload, DefaultImage),
+		Message: fmt.Sprintf("kube-burner-ocp workload=%s", p.Workload),
 	})
 
 	if rc.Backend != nil && rc.Backend.StorageClass != "" {
@@ -34,20 +34,27 @@ func (preflight) Check(ctx context.Context, rc *core.RunCtx, bag *core.Bag, trs 
 		rc.Logger.Info(f.Message)
 	}
 
-	if usingHostBinary() {
-		seen := map[string]bool{}
-		for _, tr := range trs {
-			for _, bin := range workloadSpecs[resolveParams([]core.TestRequirement{tr}).Workload].hostBins {
-				if seen[bin] {
-					continue
-				}
-				seen[bin] = true
-				if _, err := exec.LookPath(bin); err != nil {
-					findings = append(findings, core.Finding{Level: "error",
-						Message: fmt.Sprintf("workload %s needs %q on PATH (KUBE_BURNER_OCP_USE_HOST=1); install it or run via the container image", p.Workload, bin)})
-				} else {
-					findings = append(findings, core.Finding{Level: "info", Message: "host binary found: " + bin})
-				}
+	seenHost := map[string]bool{}
+	for _, bin := range []string{"kube-burner-ocp"} {
+		if _, err := exec.LookPath(bin); err != nil {
+			findings = append(findings, core.Finding{Level: "error",
+				Message: fmt.Sprintf("host execution needs %q on PATH: %v", bin, err)})
+		} else {
+			findings = append(findings, core.Finding{Level: "info", Message: "host binary found: " + bin})
+		}
+	}
+	for _, tr := range trs {
+		trParams := resolveParams([]core.TestRequirement{tr})
+		for _, bin := range workloadSpecs[trParams.Workload].hostBins {
+			if seenHost[bin] {
+				continue
+			}
+			seenHost[bin] = true
+			if _, err := exec.LookPath(bin); err != nil {
+				findings = append(findings, core.Finding{Level: "error",
+					Message: fmt.Sprintf("workload %s needs %q on PATH: %v", trParams.Workload, bin, err)})
+			} else {
+				findings = append(findings, core.Finding{Level: "info", Message: "host binary found: " + bin})
 			}
 		}
 	}

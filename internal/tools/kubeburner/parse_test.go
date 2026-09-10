@@ -295,40 +295,22 @@ func TestBuildEnv_UsesReplicas(t *testing.T) {
 	}
 }
 
-func TestBuildRunCmd_TracksPodmanContainer(t *testing.T) {
-	t.Setenv("KUBE_BURNER_USE_HOST", "")
+func TestBuildRunCmd_UsesHostBinaryRegardlessOfEnvironment(t *testing.T) {
 	dir := t.TempDir()
-	cidFile := filepath.Join(dir, "kube-burner.cid")
-	cmd, err := buildRunCmd(context.Background(), &core.RunCtx{Logger: slog.New(slog.NewTextHandler(io.Discard, nil))}, nil, dir, "TR-VIRT-010", cidFile)
+	binary := filepath.Join(dir, "kube-burner")
+	if err := os.WriteFile(binary, []byte("#!/bin/sh\n"), 0o755); err != nil {
+		t.Fatalf("write kube-burner: %v", err)
+	}
+	t.Setenv("PATH", dir)
+	cmd, err := buildRunCmd(context.Background(), &core.RunCtx{Logger: slog.New(slog.NewTextHandler(io.Discard, nil))}, nil, dir, "TR-VIRT-010")
 	if err != nil {
 		t.Fatalf("buildRunCmd: %v", err)
 	}
-	args := strings.Join(cmd.Args, " ")
-	if !strings.Contains(args, "--cidfile "+cidFile) {
-		t.Errorf("podman args missing cidfile %q: %s", cidFile, args)
+	if filepath.Base(cmd.Path) != "kube-burner" {
+		t.Fatalf("command path = %q, want kube-burner", cmd.Path)
 	}
-}
-
-func TestStopContainer_UsesRecordedContainerID(t *testing.T) {
-	dir := t.TempDir()
-	cidFile := filepath.Join(dir, "kube-burner.cid")
-	if err := os.WriteFile(cidFile, []byte("test-container\n"), 0o600); err != nil {
-		t.Fatalf("write cidfile: %v", err)
-	}
-	output := filepath.Join(dir, "args")
-	t.Setenv("TEST_OUTPUT", output)
-	if err := os.WriteFile(filepath.Join(dir, "podman"), []byte("#!/bin/sh\nprintf '%s' \"$*\" > \"$TEST_OUTPUT\"\n"), 0o755); err != nil {
-		t.Fatalf("write podman: %v", err)
-	}
-	t.Setenv("PATH", dir)
-
-	stopContainer(cidFile, slog.New(slog.NewTextHandler(io.Discard, nil)))
-	got, err := os.ReadFile(output)
-	if err != nil {
-		t.Fatalf("read podman args: %v", err)
-	}
-	if string(got) != "stop --time 10 test-container" {
-		t.Errorf("podman args = %q, want stop for recorded container", got)
+	if got, want := strings.Join(cmd.Args, " "), binary+" init -c "+filepath.Join(dir, "TR-VIRT-010", "config.yaml"); got != want {
+		t.Errorf("command args = %q, want %q", got, want)
 	}
 }
 

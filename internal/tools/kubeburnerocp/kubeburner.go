@@ -7,9 +7,6 @@ import (
 	"gitlab.cee.redhat.com/eco-special-projects/storage-cert-harness/internal/stages"
 )
 
-// DefaultImage is the harness-built kube-burner-ocp runner image (upstream ships binaries only — ADR-0003; see Containerfile).
-const DefaultImage = "localhost/kube-burner-ocp:v-src"
-
 func init() {
 	provides := []string{"TR-STOR-006", "TR-VIRT-004", "TR-VIRT-019"}
 
@@ -26,7 +23,6 @@ func init() {
 	}
 	registry.Register(stages.ToolIntegration{
 		Name:              "kube-burner-ocp",
-		Image:             DefaultImage,
 		Provides:          provides,
 		Preflight:         preflight{},
 		Provisioner:       provisioner{},

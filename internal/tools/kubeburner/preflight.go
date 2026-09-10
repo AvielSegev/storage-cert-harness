@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"os"
+	"os/exec"
 	"strings"
 
 	"gitlab.cee.redhat.com/eco-special-projects/storage-cert-harness/internal/clustercheck"
@@ -39,8 +40,13 @@ func (preflight) Check(ctx context.Context, rc *core.RunCtx, bag *core.Bag, trs 
 	var findings []core.Finding
 	findings = append(findings, core.Finding{
 		Level:   "info",
-		Message: fmt.Sprintf("kube-burner vm-snapshot replicas=%d snapshot_count=%d image=%s vm_image=%s", p.Replicas, p.SnapshotCount, imageRef(), p.VMImage),
+		Message: fmt.Sprintf("kube-burner vm-snapshot replicas=%d snapshot_count=%d vm_image=%s", p.Replicas, p.SnapshotCount, p.VMImage),
 	})
+	if _, err := exec.LookPath("kube-burner"); err != nil {
+		findings = append(findings, core.Finding{Level: "error", Message: fmt.Sprintf("host execution needs %q on PATH: %v", "kube-burner", err)})
+	} else {
+		findings = append(findings, core.Finding{Level: "info", Message: "host binary found: kube-burner"})
+	}
 	if sc != "" {
 		findings = append(findings, core.Finding{Level: "info", Message: "storage_class=" + sc})
 	}

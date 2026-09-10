@@ -59,6 +59,7 @@ if [[ "${1:-}" == "--check" ]]; then
 	fi
 	check_containerfile_arg BUILD_IMAGE "${BUILD_IMAGE}"
 	check_containerfile_arg RUNTIME_IMAGE "${RUNTIME_IMAGE}"
+	check_containerfile_arg KUBE_BURNER_VERSION "${KUBE_BURNER_VERSION}"
 	check_containerfile_arg KUBE_BURNER_OCP_VERSION "${KUBE_BURNER_OCP_VERSION}"
 	check_containerfile_arg OPENSHIFT_CLIENT_VERSION "${OPENSHIFT_CLIENT_VERSION}"
 	check_containerfile_arg VIRTBENCH_VERSION "${VIRTBENCH_VERSION}"

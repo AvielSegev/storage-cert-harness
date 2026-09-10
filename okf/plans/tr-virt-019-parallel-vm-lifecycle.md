@@ -33,7 +33,7 @@ via [virt-parallel](../workloads/virt-parallel.md).
 ## Run
 
 ```bash
-KUBECONFIG=~/.kube/config KUBE_BURNER_OCP_USE_HOST=1 bin/harness run \
+KUBECONFIG=~/.kube/config bin/harness run \
   --catalog examples/catalog.tr-virt-019.json \
   --thresholds thresholds.tr-virt-019.json \
   --plan plans/tr-virt-019-parallel-vm-lifecycle.yaml \

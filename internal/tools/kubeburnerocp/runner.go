@@ -10,7 +10,6 @@ import (
 	"strings"
 	"sync"
 
-	"gitlab.cee.redhat.com/eco-special-projects/storage-cert-harness/internal/clustercheck"
 	"gitlab.cee.redhat.com/eco-special-projects/storage-cert-harness/internal/core"
 	"gitlab.cee.redhat.com/eco-special-projects/storage-cert-harness/internal/stages"
 )
@@ -73,6 +72,7 @@ func (runner) Run(ctx context.Context, rc *core.RunCtx, bag *core.Bag, trs []cor
 		cmd, err := buildRunCmd(ctx, rc, args, resultsDir, tr.ID)
 		if err != nil {
 			runs[i].RunErr = err.Error()
+			rc.Logger.Warn("kube-burner-ocp: could not build run command", "tr", tr.ID, "err", err)
 			continue
 		}
 		cmd.Stdout = rc.ToolOutput(os.Stdout)
@@ -102,58 +102,16 @@ func (runner) Run(ctx context.Context, rc *core.RunCtx, bag *core.Bag, trs []cor
 	return stages.RunHandle{ID: "kube-burner-ocp"}, nil
 }
 
-// buildRunCmd runs the wrapper image via podman (ADR-0003), or the host binary if KUBE_BURNER_OCP_USE_HOST=1, writing into resultsDir/<subdir>.
-// usingHostBinary reports whether the adapter runs kube-burner-ocp from the host
-// PATH instead of the container image (KUBE_BURNER_OCP_USE_HOST=1). In host mode
-// the workload's host prerequisites (e.g. virtctl) must be on PATH too.
-func usingHostBinary() bool { return os.Getenv("KUBE_BURNER_OCP_USE_HOST") == "1" }
-
+// buildRunCmd runs kube-burner-ocp from the host PATH, writing into resultsDir/<subdir>.
 func buildRunCmd(ctx context.Context, rc *core.RunCtx, args []string, resultsDir, subdir string) (*exec.Cmd, error) {
-	if usingHostBinary() {
-		path, err := exec.LookPath("kube-burner-ocp")
-		if err != nil {
-			return nil, fmt.Errorf("kube-burner-ocp: KUBE_BURNER_OCP_USE_HOST=1 but kube-burner-ocp not on PATH: %w", err)
-		}
-		cmd := exec.CommandContext(ctx, path, args...)
-		cmd.Dir = filepath.Join(resultsDir, subdir)
-		rc.Logger.Info("kube-burner-ocp: running host binary", "path", path)
-		return cmd, nil
-	}
-	return buildPodmanCmd(ctx, rc, args, resultsDir, subdir)
-}
-
-func buildPodmanCmd(ctx context.Context, rc *core.RunCtx, args []string, resultsDir, subdir string) (*exec.Cmd, error) {
-	absResults, err := filepath.Abs(resultsDir)
+	path, err := exec.LookPath("kube-burner-ocp")
 	if err != nil {
-		return nil, fmt.Errorf("kube-burner-ocp: results dir: %w", err)
+		return nil, fmt.Errorf("kube-burner-ocp: kube-burner-ocp not on PATH: %w", err)
 	}
-	if err := os.MkdirAll(filepath.Join(absResults, subdir), 0o755); err != nil {
-		return nil, err
-	}
-
-	kubectlPath, err := clustercheck.ResolveKubeCLIPath()
-	if err != nil {
-		return nil, err
-	}
-
-	podmanArgs := []string{
-		"run", "--rm", "--network", "host",
-		"-v", absResults + ":/work/results:z",
-		"-v", kubectlPath + ":/usr/local/bin/kubectl:ro,z",
-		"-e", "KUBECONFIG=/kube/config",
-		"-w", "/work/results/" + subdir,
-	}
-	if kc := os.Getenv("KUBECONFIG"); kc != "" {
-		absKC, _ := filepath.Abs(kc)
-		podmanArgs = append(podmanArgs, "-v", absKC+":/kube/config:ro,z")
-	} else if home, err := os.UserHomeDir(); err == nil {
-		podmanArgs = append(podmanArgs, "-v", home+"/.kube/config:/kube/config:ro,z")
-	}
-
-	podmanArgs = append(podmanArgs, DefaultImage)
-	podmanArgs = append(podmanArgs, args...)
-	rc.Logger.Info("kube-burner-ocp: running via podman", "image", DefaultImage, "kubectl", kubectlPath)
-	return exec.CommandContext(ctx, "podman", podmanArgs...), nil
+	cmd := exec.CommandContext(ctx, path, args...)
+	cmd.Dir = filepath.Join(resultsDir, subdir)
+	rc.Logger.Info("kube-burner-ocp: running host binary", "path", path)
+	return cmd, nil
 }
 
 type collector struct{}
@@ -165,6 +123,10 @@ func (collector) Collect(_ context.Context, rc *core.RunCtx, bag *core.Bag, _ st
 	var refs []string
 	for _, r := range runs {
 		if r.Skipped != "" {
+			continue
+		}
+		if r.Subdir == "" && r.RunErr != "" {
+			rc.Logger.Warn("kube-burner-ocp: run produced no result directory", "tr", r.TRID, "err", r.RunErr)
 			continue
 		}
 		m, err := findCollectedMetrics(r.Subdir)

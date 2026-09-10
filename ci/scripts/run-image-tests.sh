@@ -46,7 +46,6 @@ podman run --rm --userns=keep-id --user "$(id -u):$(id -g)" --network=host \
 	-v "$(realpath "${KUBECONFIG}"):/work/kubeconfig:ro,Z" \
 	-w /work \
 	-e KUBECONFIG=/work/kubeconfig \
-	-e KUBE_BURNER_OCP_USE_HOST=1 \
 	"${image}" run \
 	--catalog /work/catalog.json \
 	--thresholds /work/thresholds.json \

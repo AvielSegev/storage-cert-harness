@@ -16,8 +16,8 @@ Certify storage provisioning performance for TR-STOR-006 on a partner cluster.
 
 - OpenShift cluster with a working storage class (plan default: `ontap-san`)
 - `kubectl` or `oc` on PATH; valid kubeconfig
-- `podman` (default) or host `kube-burner-ocp` with `KUBE_BURNER_OCP_USE_HOST=1`
-- Harness image `localhost/kube-burner-ocp:v-src` built locally
+- Host `kube-burner-ocp` on PATH, plus the workload's required host binaries
+- If running the harness image, use an image that packages `kube-burner-ocp`
 
 ## Steps
 
@@ -36,10 +36,10 @@ Use `concurrency: 1` unless coordinated.
 
 | Symptom | Likely cause |
 |---------|--------------|
-| `need kubectl or oc on PATH` | CLI missing for podman volume mount |
+| `need kubectl or oc on PATH` | Cluster CLI missing from the host environment |
 | `missing required param "claim_size"` | Incomplete plan override |
 | `workload requires storage_class` | Backend not selected |
-| No `jobSummary.json` | Workload failed before export; check podman logs |
+| No `jobSummary.json` | Workload failed before export; check kube-burner output |
 
 ## Related
 

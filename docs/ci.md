@@ -297,6 +297,7 @@ Macs natively, and Apple Silicon via Docker/Podman Desktop Rosetta 2.
 | Binary | Purpose | Install method |
 |--------|---------|----------------|
 | `harness` | CLI (this repo) | Go build from source |
+| `kube-burner` | TR-VIRT-010 adapter | GitHub release tarball (`KUBE_BURNER_VERSION`) |
 | `kube-burner-ocp` | TR-STOR-006 adapter | GitHub release tarball (`KUBE_BURNER_OCP_VERSION`) |
 | `virtbench` | virtbench adapter local-exec | Pinned `VIRTBENCH_VERSION` |
 
@@ -507,7 +508,7 @@ uploads `logs/*.log` when a job fails (not the README). GitHub does the same.
 | `supply-chain.sh` | vendor/`go list`, govulncheck, gosec, `trivy fs`. **CI allow-failure** until [ECOPROJECT-5419](https://redhat.atlassian.net/browse/ECOPROJECT-5419). |
 | `replay-smoke.sh` | `harness validate` + `run` with example catalog/plan (no cluster). GitLab: **manual**. GitHub: skipped (opt-in via `CI_RUN_REPLAY_SMOKE`). |
 | `image-build.sh` | `linux/amd64` Containerfile → `dist/harness-image.tar` (no push). Local: **podman**. |
-| `image-contents-check.sh` | Verify `harness`, `kubectl`, `virtctl`, `kube-burner-ocp`, and `virtbench` are in the image |
+| `image-contents-check.sh` | Verify `harness`, `kube-burner`, `kubectl`, `virtctl`, `kube-burner-ocp`, and `virtbench` are in the image |
 | `image-scan-trivy.sh` | Trivy HIGH/CRITICAL `--ignore-unfixed`, secrets, misconfig, CycloneDX SBOM. |
 | `image-scan-dive.sh` | `CI=true dive` (wasted layers). |
 | `image-push.sh` | Quay push; requires `PUSH=1`. GitHub: **automatic** on `main` push (or `workflow_dispatch` with `publish=true`). GitLab: **manual** on `main`. |
@@ -563,7 +564,7 @@ Self-tests use `mktemp`.
 |-----|---------|
 | `lint-yaml` | reorder / `layout-check.sh` |
 | `build` | linux/amd64 `bin/harness` + `harness version` == binary track |
-| `image-build` | `linux/amd64` tar + tag == image track + contents-check (`harness`, `kube-burner-ocp`, `virtbench`) |
+| `image-build` | `linux/amd64` tar + tag == image track + contents-check (`harness`, `kube-burner`, `kube-burner-ocp`, `virtbench`) |
 | `image-scan-trivy` | loads tar, HIGH/CRITICAL gate (`allow_failure`) |
 | `image-scan-dive` | loads tar, wasted-layer gate (`allow_failure`) |
 
