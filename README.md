@@ -18,16 +18,18 @@ make build
                    --partner-level 3 --output ./out
 ```
 
-`thresholds.example.json` contains **fake** numbers. Real SLA thresholds are
-never committed in the clear (see below) and are supplied at run time via
-`--thresholds <path>` or `HARNESS_THRESHOLDS`.
+`thresholds.example.json` contains example values. The certification
+`thresholds.json` is supplied with the repository inputs and is passed at run
+time via `--thresholds <path>` or `HARNESS_THRESHOLDS`.
+
+Partner certification workflow: [`PARTNER-CERTIFICATION-GUIDE.md`](PARTNER-CERTIFICATION-GUIDE.md).
 
 ## How it works
 
 Ports-and-adapters. The KB export **v2.0 two-file contract** drives a run —
-`catalog.json` (publishable: per-Test-Requirement metadata) and `thresholds.json`
-(sensitive: SLA numbers + check definitions), joined on TR id and required to
-share the same `kb_git_commit`. Each tool is an adapter bundle implementing small
+`catalog.json` (per-Test-Requirement metadata) and `thresholds.json` (SLA
+thresholds and check definitions), joined on TR id and required to share the
+same `kb_git_commit`. Each tool is an adapter bundle implementing small
 stage interfaces (`Preflight → Provision → Run → Collect → Parse`); the core
 scores each Test Requirement into one verdict per SLA and per check, then renders
 a report. See [`docs/architecture.md`](docs/architecture.md),
@@ -41,10 +43,9 @@ Copy `internal/tools/example/` and follow
 
 ## Secret handling
 
-SLA threshold numbers must never be published by Red Hat. This repo commits only
-fake examples + JSON Schemas; the real bundle is gitignored and (per
-[ADR-0004](decisions/0004-threshold-secret-handling.md)) will live only in an
-encrypted folder decryptable by Red Hat developers.
+`thresholds.json` is a repository input for certification runs. Backend
+credentials remain references to files or Kubernetes Secrets; do not commit
+plaintext backend credentials. Use `backends.example.yaml` as the template.
 
 ## Layout
 

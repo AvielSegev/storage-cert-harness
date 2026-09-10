@@ -56,7 +56,7 @@ func newRootCmd() *cobra.Command {
 		SilenceUsage:  true,
 		SilenceErrors: true,
 	}
-	root.AddCommand(newVersionCmd(), newListCmd(), newValidateCmd(), newPreflightCmd(), newRunCmd())
+	root.AddCommand(newVersionCmd(), newListCmd(), newValidateCmd(), newPreflightCmd(), newRunCmd(), newAttestCmd())
 	return root
 }
 
@@ -400,18 +400,11 @@ func newRunCmd() *cobra.Command {
 			}
 
 			if outputDir != "" {
+				var savedAttestations []core.Attestation
 				if len(attestations) > 0 && attestationsPath == "" {
-					if err := attestation.WriteFile(filepath.Join(outputDir, "attestations.json"), attestations); err != nil {
-						return err
-					}
+					savedAttestations = attestations
 				}
-				if err := writeFile(filepath.Join(outputDir, "report.json"), func(f *os.File) error { return report.WriteJSON(f, rep) }); err != nil {
-					return err
-				}
-				if err := writeFile(filepath.Join(outputDir, "report.md"), func(f *os.File) error { return report.WriteMarkdown(f, rep) }); err != nil {
-					return err
-				}
-				if err := writeFile(filepath.Join(outputDir, "report.junit.xml"), func(f *os.File) error { return (report.JUnitExporter{}).Export(f, rep) }); err != nil {
+				if err := writeReportFiles(outputDir, rep, savedAttestations); err != nil {
 					return err
 				}
 			}
@@ -448,6 +441,64 @@ func newRunCmd() *cobra.Command {
 	return cmd
 }
 
+func newAttestCmd() *cobra.Command {
+	var (
+		reportPath       string
+		attestationsPath string
+		attnQuestions    string
+		outputDir        string
+	)
+	cmd := &cobra.Command{
+		Use:   "attest",
+		Short: "Add attestations to an existing report without rerunning tests",
+		Args:  cobra.NoArgs,
+		RunE: func(cmd *cobra.Command, _ []string) error {
+			rep, err := report.ReadJSON(reportPath)
+			if err != nil {
+				return err
+			}
+
+			var attestations []core.Attestation
+			switch {
+			case attestationsPath != "":
+				attestations, err = loadAttestations(attestationsPath)
+				if err != nil {
+					return err
+				}
+			case isInteractive(os.Stdin):
+				qs, loadErr := attestation.LoadQuestions(attnQuestions)
+				if loadErr != nil {
+					return loadErr
+				}
+				attestations, err = attestation.Prompt(cmd.Context(), qs, os.Stdin, cmd.ErrOrStderr())
+				if err != nil {
+					return err
+				}
+			default:
+				return fmt.Errorf("provide --attestations or run interactively to add attestations")
+			}
+			if len(attestations) == 0 {
+				return fmt.Errorf("no attestations provided")
+			}
+
+			rep.Attestations = attestations
+			if outputDir == "" {
+				outputDir = filepath.Dir(reportPath)
+			}
+			if err := writeReportFiles(outputDir, rep, attestations); err != nil {
+				return err
+			}
+			return report.WriteMarkdown(cmd.OutOrStdout(), rep)
+		},
+	}
+	cmd.Flags().StringVar(&reportPath, "report", "", "path to an existing report.json")
+	cmd.Flags().StringVar(&attestationsPath, "attestations", "", "path to attestation JSON (self-reported, unobservable claims)")
+	cmd.Flags().StringVar(&attnQuestions, "attestation-questions", "", "path to a custom attestation question set (YAML); defaults to the built-in set")
+	cmd.Flags().StringVar(&outputDir, "output", "", "directory to write report.json / report.md / report.junit.xml (defaults to the input report directory)")
+	_ = cmd.MarkFlagRequired("report")
+	return cmd
+}
+
 // isInteractive reports whether f is a terminal (character device), so the run
 // only prompts for attestations when a human can answer — CI and replay skip it.
 func isInteractive(f *os.File) bool {
@@ -465,6 +516,24 @@ func writeFile(path string, fn func(*os.File) error) error {
 	}
 	defer f.Close() //nolint:errcheck // follow-up: check Close error
 	return fn(f)
+}
+
+func writeReportFiles(outputDir string, rep core.Report, attestations []core.Attestation) error {
+	if err := os.MkdirAll(outputDir, 0o755); err != nil {
+		return err
+	}
+	if len(attestations) > 0 {
+		if err := attestation.WriteFile(filepath.Join(outputDir, "attestations.json"), attestations); err != nil {
+			return err
+		}
+	}
+	if err := writeFile(filepath.Join(outputDir, "report.json"), func(f *os.File) error { return report.WriteJSON(f, rep) }); err != nil {
+		return err
+	}
+	if err := writeFile(filepath.Join(outputDir, "report.md"), func(f *os.File) error { return report.WriteMarkdown(f, rep) }); err != nil {
+		return err
+	}
+	return writeFile(filepath.Join(outputDir, "report.junit.xml"), func(f *os.File) error { return (report.JUnitExporter{}).Export(f, rep) })
 }
 
 // loadAttestations reads a partner attestation file of the form
