@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Verify the built image contains harness, kube-burner-ocp, kubectl, virtctl, and virtbench.
+# Verify the built image contains harness, kube-burner, kube-burner-ocp, kubectl, virtctl, and virtbench.
 # Runs after image-build.sh. Same script locally and in GitLab.
 set -euo pipefail
 # shellcheck source=ci-utils.sh
@@ -60,6 +60,13 @@ else
 	fail "/usr/bin/harness is missing or cannot run"
 fi
 
+echo "==> checking /usr/bin/kube-burner"
+if run_cmd /usr/bin/kube-burner version >/dev/null 2>&1 || run_cmd /usr/bin/kube-burner --help >/dev/null 2>&1; then
+	echo "  kube-burner: present"
+else
+	fail "/usr/bin/kube-burner is missing or cannot run"
+fi
+
 echo "==> checking /usr/bin/kube-burner-ocp"
 if run_cmd /usr/bin/kube-burner-ocp version >/dev/null 2>&1 || run_cmd /usr/bin/kube-burner-ocp --help >/dev/null 2>&1; then
 	echo "  kube-burner-ocp: present"
@@ -86,13 +93,6 @@ if run_cmd /usr/bin/virtbench fio --help >/dev/null 2>&1; then
 	echo "  virtbench fio: present"
 else
 	fail "/usr/bin/virtbench fio is missing or cannot run"
-fi
-
-echo "==> checking podman"
-if run_cmd podman --version >/dev/null 2>&1; then
-	echo "  podman: present"
-else
-	fail "podman is missing; generic kube-burner execution cannot start"
 fi
 
 if [[ "${errors}" -gt 0 ]]; then

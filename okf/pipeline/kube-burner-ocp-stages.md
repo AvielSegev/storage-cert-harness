@@ -2,7 +2,7 @@
 type: pipeline
 title: kube-burner-ocp adapter stages
 description: >-
-  End-to-end stage flow for kube-burner-ocp workloads via podman execution.
+  End-to-end stage flow for kube-burner-ocp workloads via host execution.
 tags: [pipeline, preflight, provision, run, collect, parse]
 timestamp: 2026-08-26T12:00:00Z
 ---
@@ -23,7 +23,7 @@ Tool: [kube-burner-ocp](../adapters/kube-burner-ocp.md).
 
 - `resolveParams(trs)` from plan overrides
 - `validate()` — requires `workload` in `workloadSpecs`
-- Logs workload name and image `localhost/kube-burner-ocp:v-src`
+- Logs workload name and verifies `kube-burner-ocp` is available on `PATH`
 - Logs `storage_class` from backend when set
 - Cluster prereqs: union of workload `prereqs` (e.g. KubeVirt for virt-density)
 - Stores `params` in bag
@@ -39,8 +39,8 @@ For each TR (parallel goroutines when multiple cmds):
 
 1. Subdir: `{results_dir}/{TR-ID}/`
 2. `buildCLIArgs(params, storageClass)` → e.g. `virt-density --vms-per-node 1 ...`
-3. Execute via **podman** (default) or host binary (`KUBE_BURNER_OCP_USE_HOST=1`)
-4. Podman mounts: results dir, kubeconfig, kubectl/oc binary, `--network host`
+3. Execute the host `kube-burner-ocp` binary from `PATH`
+4. The binary uses the host kubeconfig and cluster CLI environment directly
 5. Records `kboRun` per TR (TRID, Workload, Subdir, RunErr, Skipped)
 
 ### Duplicate workload
@@ -71,12 +71,6 @@ From `ToolIntegration`:
 - `ParallelSafe: false`
 - `ExclusivityGroups: ["kube-burner", "cdi", "storage"]`
 - Plans set `concurrency: 1`
-
-## Environment
-
-| Variable | Effect |
-|----------|--------|
-| `KUBE_BURNER_OCP_USE_HOST=1` | Run host `kube-burner-ocp` binary instead of podman |
 
 Cluster access (kubeconfig, `kubectl`/`oc` on PATH) is required for live runs.
 

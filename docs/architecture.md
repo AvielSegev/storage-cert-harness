@@ -13,8 +13,10 @@ This page is the working overview.
   SLA numbers + full check definitions. They join on TR id and must share
   `provenance.kb_git_commit`. Adding a *test requirement* is a KB export change;
   adding a *tool* is a new adapter bundle.
-- **Run released images.** Tools run as the container images their projects
-  publish; we compile only our adapter glue.
+- **Run released tool artifacts.** Adapters use the released tool artifact
+  supplied by the tool project; the kube-burner adapters execute their released
+  host binaries from `PATH` (the harness image packages `kube-burner-ocp`), and
+  we compile only our adapter glue.
 
 ## Flow
 

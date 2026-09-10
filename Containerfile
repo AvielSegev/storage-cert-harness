@@ -7,6 +7,7 @@ ARG IMAGE_VERSION=0.0.0-dev
 ARG TARGETARCH=amd64
 ARG BUILD_IMAGE=registry.access.redhat.com/ubi9/python-311:9.8
 ARG RUNTIME_IMAGE=registry.access.redhat.com/ubi9/python-311:9.8
+ARG KUBE_BURNER_VERSION=v2.8.5
 ARG KUBE_BURNER_OCP_VERSION=v1.12.3
 ARG OPENSHIFT_CLIENT_VERSION=4.22.11
 ARG VIRTBENCH_VERSION=v2.0.0
@@ -14,15 +15,20 @@ ARG KUBEVIRT_VERSION=v1.9.0
 
 FROM ${BUILD_IMAGE} AS builder
 ARG TARGETARCH
+ARG KUBE_BURNER_VERSION
 ARG KUBE_BURNER_OCP_VERSION
 ARG KUBEVIRT_VERSION
 USER 0
 WORKDIR /src
 
 RUN set -eux; \
-    ver="${KUBE_BURNER_OCP_VERSION#v}"; \
-    case "${TARGETARCH}" in amd64) tool_arch=x86_64; virtctl_arch=amd64 ;; arm64) tool_arch=arm64; virtctl_arch=arm64 ;; *) echo "unsupported TARGETARCH=${TARGETARCH}" >&2; exit 1 ;; esac; \
-    curl -sSfL "https://github.com/kube-burner/kube-burner-ocp/releases/download/${KUBE_BURNER_OCP_VERSION}/kube-burner-ocp-V${ver}-linux-${tool_arch}.tar.gz" \
+    case "${TARGETARCH}" in amd64) tool_arch=x86_64; kube_arch=x86_64; virtctl_arch=amd64 ;; arm64) tool_arch=arm64; kube_arch=arm64; virtctl_arch=arm64 ;; *) echo "unsupported TARGETARCH=${TARGETARCH}" >&2; exit 1 ;; esac; \
+    kube_ver="${KUBE_BURNER_VERSION#v}"; \
+    curl -sSfL "https://github.com/kube-burner/kube-burner/releases/download/${KUBE_BURNER_VERSION}/kube-burner-V${kube_ver}-linux-${kube_arch}.tar.gz" \
+      | tar xz -C /tmp kube-burner; \
+    install -m 0755 /tmp/kube-burner /kube-burner; \
+    ocp_ver="${KUBE_BURNER_OCP_VERSION#v}"; \
+    curl -sSfL "https://github.com/kube-burner/kube-burner-ocp/releases/download/${KUBE_BURNER_OCP_VERSION}/kube-burner-ocp-V${ocp_ver}-linux-${tool_arch}.tar.gz" \
       | tar xz -C /tmp kube-burner-ocp; \
     install -m 0755 /tmp/kube-burner-ocp /kube-burner-ocp; \
     curl -sSfL "https://github.com/kubevirt/kubevirt/releases/download/${KUBEVIRT_VERSION}/virtctl-${KUBEVIRT_VERSION}-linux-${virtctl_arch}" \
@@ -55,11 +61,11 @@ ARG IMAGE_VERSION
 ARG VIRTBENCH_VERSION
 ARG HARNESS_VERSION
 USER 0
-RUN dnf install -y podman && dnf clean all
 LABEL org.opencontainers.image.version="${IMAGE_VERSION}"
 LABEL io.storage-cert-harness.virtbench.version="${VIRTBENCH_VERSION}"
 LABEL io.storage-cert-harness.harness.version="${HARNESS_VERSION}"
 COPY bin/harness /usr/bin/harness
+COPY --from=builder /kube-burner /usr/bin/kube-burner
 COPY --from=builder /kube-burner-ocp /usr/bin/kube-burner-ocp
 COPY --from=builder /virtctl /usr/bin/virtctl
 COPY --from=virtbench-builder /opt/virtbench /opt/virtbench-runtime

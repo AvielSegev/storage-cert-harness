@@ -4,7 +4,6 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"log/slog"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -15,14 +14,6 @@ import (
 	"gitlab.cee.redhat.com/eco-special-projects/storage-cert-harness/internal/core"
 	"gitlab.cee.redhat.com/eco-special-projects/storage-cert-harness/internal/stages"
 )
-
-// imageRef is the kube-burner runner image, overridable via KUBE_BURNER_IMAGE.
-func imageRef() string {
-	if v := os.Getenv("KUBE_BURNER_IMAGE"); v != "" {
-		return v
-	}
-	return DefaultImage
-}
 
 type runner struct{}
 
@@ -62,8 +53,7 @@ func (runner) Run(ctx context.Context, rc *core.RunCtx, bag *core.Bag, trs []cor
 	if _, err := writeConfig(subdir, p); err != nil {
 		return stages.RunHandle{}, err
 	}
-	containerIDFile := filepath.Join(subdir, "kube-burner.cid")
-	cmd, err := buildRunCmd(ctx, rc, buildEnv(p, sc), resultsDir, tr.ID, containerIDFile)
+	cmd, err := buildRunCmd(ctx, rc, buildEnv(p, sc), resultsDir, tr.ID)
 	if err != nil {
 		return stages.RunHandle{}, err
 	}
@@ -76,75 +66,28 @@ func (runner) Run(ctx context.Context, rc *core.RunCtx, bag *core.Bag, trs []cor
 		runErr = err.Error()
 		rc.Logger.Warn("kube-burner: run failed", "tr", tr.ID, "err", err)
 	}
-	if ctx.Err() != nil {
-		stopContainer(containerIDFile, rc.Logger)
-	}
 	bag.Set("kb_subdir", subdir)
 	bag.Set("kb_trid", tr.ID)
 	bag.Set("kb_runerr", runErr)
 	return stages.RunHandle{ID: "kube-burner"}, nil
 }
 
-// buildRunCmd runs kube-burner init -c via the released image (podman, ADR-0003), or the host binary if KUBE_BURNER_USE_HOST=1.
-func buildRunCmd(ctx context.Context, rc *core.RunCtx, env []string, resultsDir, subdir, containerIDFile string) (*exec.Cmd, error) {
+// buildRunCmd runs kube-burner init -c using the host binary.
+func buildRunCmd(ctx context.Context, rc *core.RunCtx, env []string, resultsDir, subdir string) (*exec.Cmd, error) {
+	path, err := exec.LookPath("kube-burner")
+	if err != nil {
+		return nil, fmt.Errorf("kube-burner: kube-burner not on PATH: %w", err)
+	}
 	absResults, err := filepath.Abs(resultsDir)
 	if err != nil {
 		return nil, fmt.Errorf("kube-burner: results dir: %w", err)
 	}
-
-	if os.Getenv("KUBE_BURNER_USE_HOST") == "1" {
-		path, err := exec.LookPath("kube-burner")
-		if err != nil {
-			return nil, fmt.Errorf("kube-burner: KUBE_BURNER_USE_HOST=1 but kube-burner not on PATH: %w", err)
-		}
-		cfg := filepath.Join(absResults, subdir, "config.yaml")
-		cmd := exec.CommandContext(ctx, path, "init", "-c", cfg)
-		cmd.Dir = filepath.Join(absResults, subdir)
-		cmd.Env = append(os.Environ(), env...)
-		rc.Logger.Info("kube-burner: running host binary", "path", path)
-		return cmd, nil
-	}
-
-	// Generic kube-burner uses client-go + KUBECONFIG (no kubectl binary), so we mount only results + kubeconfig.
-	podmanArgs := []string{
-		"run", "--rm", "--network", "host",
-		"--cidfile", containerIDFile,
-		"-v", absResults + ":/work/results:z",
-		"-e", "KUBECONFIG=/kube/config",
-		"-w", "/work/results/" + subdir,
-	}
-	for _, e := range env {
-		podmanArgs = append(podmanArgs, "-e", e)
-	}
-	if kc := os.Getenv("KUBECONFIG"); kc != "" {
-		absKC, _ := filepath.Abs(kc)
-		podmanArgs = append(podmanArgs, "-v", absKC+":/kube/config:ro,z")
-	} else if home, err := os.UserHomeDir(); err == nil {
-		podmanArgs = append(podmanArgs, "-v", home+"/.kube/config:/kube/config:ro,z")
-	}
-	podmanArgs = append(podmanArgs, imageRef(),
-		"init", "-c", "/work/results/"+subdir+"/config.yaml")
-	rc.Logger.Info("kube-burner: running via podman", "image", imageRef())
-	return exec.CommandContext(ctx, "podman", podmanArgs...), nil
-}
-
-func stopContainer(containerIDFile string, logger *slog.Logger) {
-	b, err := os.ReadFile(containerIDFile)
-	if err != nil {
-		if !os.IsNotExist(err) {
-			logger.Warn("kube-burner: read container ID", "err", err)
-		}
-		return
-	}
-	containerID := strings.TrimSpace(string(b))
-	if containerID == "" {
-		return
-	}
-	ctx, cancel := context.WithTimeout(context.Background(), cleanupTimeout)
-	defer cancel()
-	if output, err := exec.CommandContext(ctx, "podman", "stop", "--time", "10", containerID).CombinedOutput(); err != nil {
-		logger.Warn("kube-burner: stop container", "id", containerID, "err", err, "output", strings.TrimSpace(string(output)))
-	}
+	cfg := filepath.Join(absResults, subdir, "config.yaml")
+	cmd := exec.CommandContext(ctx, path, "init", "-c", cfg)
+	cmd.Dir = filepath.Join(absResults, subdir)
+	cmd.Env = append(os.Environ(), env...)
+	rc.Logger.Info("kube-burner: running host binary", "path", path)
+	return cmd, nil
 }
 
 type collector struct{}

@@ -19,20 +19,20 @@ Registered in `internal/tools/kubeburnerocp/kubeburner.go` via
 | Property | Value |
 |----------|-------|
 | Name | `kube-burner-ocp` |
-| Default image | `localhost/kube-burner-ocp:v-src` |
+| Execution | Host `kube-burner-ocp` binary from `PATH` |
 | Provides | [TR-STOR-006](../test-requirements/TR-STOR-006.md), [TR-VIRT-013](../test-requirements/TR-VIRT-013.md), [TR-VIRT-019](../test-requirements/TR-VIRT-019.md) |
 | Parallel safe | `false` |
 | Exclusivity groups | `kube-burner`, `cdi`, `storage` |
 
-Upstream kube-burner-ocp ships binaries only; the harness builds a runner
-image (ADR-0003). Execution uses **podman** by default, or host binary when
-`KUBE_BURNER_OCP_USE_HOST=1`.
+The harness executes the released `kube-burner-ocp` binary directly from
+`PATH`. The harness container image packages that binary for containerized
+harness runs; no nested tool container is used.
 
 ## Stages implemented
 
 | Stage | Type | Role |
 |-------|------|------|
-| Preflight | `preflight` | Validate params, log workload/image, optional cluster prereqs |
+| Preflight | `preflight` | Validate params, check host binaries, optional cluster prereqs |
 | Provision | `provisioner` | Create `{workDir}/kubeburner-results/` |
 | Run | `runner` | Invoke workload subcommand per TR |
 | Collect | `collector` | Gather `jobSummary.json` + `*Quantiles*` JSON |
@@ -84,12 +84,6 @@ Optional:
 
 Storage class is **not** a plan param — sourced from harness `--backend`
 (`rc.Backend.StorageClass`) → `--storage-class-name`.
-
-## Environment toggles
-
-| Variable | Effect |
-|----------|--------|
-| `KUBE_BURNER_OCP_USE_HOST=1` | Run host `kube-burner-ocp` binary instead of podman |
 
 ## Duplicate workload handling
 
