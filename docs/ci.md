@@ -21,7 +21,7 @@ ci/
     images.sh            # load ci/config/images.env, derive Trivy/Dive refs
     build.sh             # bin/harness (binary_version ldflags)
     image-build.sh       # linux/amd64 container → dist/harness-image.tar
-    image-contents-check.sh  # verify harness + kube-burner-ocp + virtbench
+    image-contents-check.sh  # verify harness + kubectl + virtctl + tool binaries
     layout-check.sh      # verify ci/scripts + ci/config + version files
     set-next-version.sh  # human-driven version bumps
     advance-version.sh   # CI auto-advance on main push
@@ -507,7 +507,7 @@ uploads `logs/*.log` when a job fails (not the README). GitHub does the same.
 | `supply-chain.sh` | vendor/`go list`, govulncheck, gosec, `trivy fs`. **CI allow-failure** until [ECOPROJECT-5419](https://redhat.atlassian.net/browse/ECOPROJECT-5419). |
 | `replay-smoke.sh` | `harness validate` + `run` with example catalog/plan (no cluster). GitLab: **manual**. GitHub: skipped (opt-in via `CI_RUN_REPLAY_SMOKE`). |
 | `image-build.sh` | `linux/amd64` Containerfile → `dist/harness-image.tar` (no push). Local: **podman**. |
-| `image-contents-check.sh` | Verify `harness`, `kube-burner-ocp`, `virtbench` are in the image |
+| `image-contents-check.sh` | Verify `harness`, `kubectl`, `virtctl`, `kube-burner-ocp`, and `virtbench` are in the image |
 | `image-scan-trivy.sh` | Trivy HIGH/CRITICAL `--ignore-unfixed`, secrets, misconfig, CycloneDX SBOM. |
 | `image-scan-dive.sh` | `CI=true dive` (wasted layers). |
 | `image-push.sh` | Quay push; requires `PUSH=1`. GitHub: **automatic** on `main` push (or `workflow_dispatch` with `publish=true`). GitLab: **manual** on `main`. |

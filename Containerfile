@@ -10,19 +10,24 @@ ARG RUNTIME_IMAGE=registry.access.redhat.com/ubi9/python-311:9.8
 ARG KUBE_BURNER_OCP_VERSION=v1.12.3
 ARG OPENSHIFT_CLIENT_VERSION=4.22.11
 ARG VIRTBENCH_VERSION=v2.0.0
+ARG KUBEVIRT_VERSION=v1.9.0
 
 FROM ${BUILD_IMAGE} AS builder
 ARG TARGETARCH
 ARG KUBE_BURNER_OCP_VERSION
+ARG KUBEVIRT_VERSION
 USER 0
 WORKDIR /src
 
 RUN set -eux; \
     ver="${KUBE_BURNER_OCP_VERSION#v}"; \
-    case "${TARGETARCH}" in amd64) tool_arch=x86_64 ;; arm64) tool_arch=arm64 ;; *) echo "unsupported TARGETARCH=${TARGETARCH}" >&2; exit 1 ;; esac; \
+    case "${TARGETARCH}" in amd64) tool_arch=x86_64; virtctl_arch=amd64 ;; arm64) tool_arch=arm64; virtctl_arch=arm64 ;; *) echo "unsupported TARGETARCH=${TARGETARCH}" >&2; exit 1 ;; esac; \
     curl -sSfL "https://github.com/kube-burner/kube-burner-ocp/releases/download/${KUBE_BURNER_OCP_VERSION}/kube-burner-ocp-V${ver}-linux-${tool_arch}.tar.gz" \
       | tar xz -C /tmp kube-burner-ocp; \
-    install -m 0755 /tmp/kube-burner-ocp /kube-burner-ocp
+    install -m 0755 /tmp/kube-burner-ocp /kube-burner-ocp; \
+    curl -sSfL "https://github.com/kubevirt/kubevirt/releases/download/${KUBEVIRT_VERSION}/virtctl-${KUBEVIRT_VERSION}-linux-${virtctl_arch}" \
+      -o /tmp/virtctl; \
+    install -m 0755 /tmp/virtctl /virtctl
 
 FROM ${RUNTIME_IMAGE} AS virtbench-builder
 ARG TARGETARCH
@@ -56,6 +61,7 @@ LABEL io.storage-cert-harness.virtbench.version="${VIRTBENCH_VERSION}"
 LABEL io.storage-cert-harness.harness.version="${HARNESS_VERSION}"
 COPY bin/harness /usr/bin/harness
 COPY --from=builder /kube-burner-ocp /usr/bin/kube-burner-ocp
+COPY --from=builder /virtctl /usr/bin/virtctl
 COPY --from=virtbench-builder /opt/virtbench /opt/virtbench-runtime
 COPY --from=virtbench-builder /opt/virtbench-venv /opt/virtbench-venv
 COPY --from=virtbench-builder /opt/virtbench-venv/bin/virtbench /usr/bin/virtbench

@@ -62,6 +62,7 @@ if [[ "${1:-}" == "--check" ]]; then
 	check_containerfile_arg KUBE_BURNER_OCP_VERSION "${KUBE_BURNER_OCP_VERSION}"
 	check_containerfile_arg OPENSHIFT_CLIENT_VERSION "${OPENSHIFT_CLIENT_VERSION}"
 	check_containerfile_arg VIRTBENCH_VERSION "${VIRTBENCH_VERSION}"
+	check_containerfile_arg KUBEVIRT_VERSION "${KUBEVIRT_VERSION}"
 	echo "ci/config/images.yml and Containerfile ARG defaults match ci/config/images.env"
 	exit 0
 fi
