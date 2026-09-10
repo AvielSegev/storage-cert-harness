@@ -23,7 +23,7 @@ verifies most of these automatically.
 - [ ] `StorageClass` for the storage under test exists in the cluster
 - [ ] `VolumeSnapshotClass` created and exists in the cluster
 - [ ] CDI scratch space `StorageClass` (filesystem-mode, backed by the storage under test) created and configured (VM / CDI test plans)
-- [ ] `thresholds.json` obtained out-of-band from the Red Hat partner engineering team
+- [ ] `thresholds.json` present with the repository certification inputs
 - [ ] `backends.yaml` prepared with your array's details (copy `backends.example.yaml`)
 - [ ] A test-plan YAML chosen from `plans/` (or a custom plan)
 - [ ] Image registry reachable from the execution host (or internal mirror configured)
@@ -183,13 +183,11 @@ gitignored.
 
 ---
 
-## Step 6 — Obtain `thresholds.json`
+## Step 6 — Confirm `thresholds.json`
 
-The SLA threshold file is sensitive and is provided by the Red Hat partner
-engineering team. Place it at a path of your choice (e.g.
-`/run/secrets/thresholds.json`) and reference it with `--thresholds` at run
-time. Do **not** commit it. See
-[ADR-0004](../decisions/0004-threshold-secret-handling.md).
+The repository certification inputs include `thresholds.json`. Keep the
+catalog and thresholds from the same export and pass the file to the harness
+with `--thresholds`.
 
 ---
 
@@ -215,11 +213,10 @@ configuration before committing to a full run:
 
 ```bash
 bin/harness preflight \
-  --kubeconfig "$KUBECONFIG" \
+  --catalog catalog.json \
   --plan plans/example-smoke.yaml \
   --backends backends.yaml \
-  --backend my-array \
-  --thresholds /run/secrets/thresholds.json
+  --backend my-array
 ```
 
 All preflight checks must pass (exit 0) before proceeding.
@@ -230,15 +227,19 @@ All preflight checks must pass (exit 0) before proceeding.
 
 ```bash
 bin/harness run \
-  --kubeconfig "$KUBECONFIG" \
+  --catalog catalog.json \
   --plan plans/example-performance.yaml \
   --backends backends.yaml \
   --backend my-array \
-  --thresholds /run/secrets/thresholds.json \
-  --report-dir ./reports
+  --thresholds thresholds.json \
+  --workdir ./reports \
+  --output ./reports \
+  --verbose
 ```
 
-When the run completes, `reports/` will contain a machine-readable `report.json`
-and a human-readable `report.md`.
+When the run completes, `reports/` will contain `report.json`, `report.md`,
+`report.junit.xml`, `run.log`, and tool-generated result artifacts. Create the
+submission archive described in
+[`PARTNER-CERTIFICATION-GUIDE.md`](../PARTNER-CERTIFICATION-GUIDE.md).
 
 ---

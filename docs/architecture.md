@@ -9,8 +9,8 @@ This page is the working overview.
   (`internal/stages`); it never imports a concrete tool.
 - **Data-driven.** The KB export **v2.0 two-file contract** (ADR-0006) drives a
   run: `catalog.json` (publishable — per-Test-Requirement metadata + counts)
-  says what exists; the runtime-supplied `thresholds.json` (sensitive) holds the
-  SLA numbers + full check definitions. They join on TR id and must share
+  says what exists; the repository-supplied `thresholds.json` holds the SLA
+  numbers + full check definitions. They join on TR id and must share
   `provenance.kb_git_commit`. Adding a *test requirement* is a KB export change;
   adding a *tool* is a new adapter bundle.
 - **Run released tool artifacts.** Adapters use the released tool artifact
