@@ -31,6 +31,7 @@ build_args=(
 	--build-arg "KUBE_BURNER_OCP_VERSION=${KUBE_BURNER_OCP_VERSION}"
 	--build-arg "OPENSHIFT_CLIENT_VERSION=${OPENSHIFT_CLIENT_VERSION}"
 	--build-arg "VIRTBENCH_VERSION=${VIRTBENCH_VERSION}"
+	--build-arg "KUBEVIRT_VERSION=${KUBEVIRT_VERSION}"
 	--platform "linux/${target_arch}"
 	-t "${ref}"
 	-t "${QUAY_IMAGE}:local"

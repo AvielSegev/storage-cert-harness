@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Verify the built image contains harness, kube-burner-ocp, kubectl, and virtbench.
+# Verify the built image contains harness, kube-burner-ocp, kubectl, virtctl, and virtbench.
 # Runs after image-build.sh. Same script locally and in GitLab.
 set -euo pipefail
 # shellcheck source=ci-utils.sh
@@ -72,6 +72,13 @@ if run_cmd /usr/bin/kubectl version --client >/dev/null 2>&1; then
 	echo "  kubectl: present"
 else
 	fail "/usr/bin/kubectl is missing or cannot run"
+fi
+
+echo "==> checking /usr/bin/virtctl"
+if run_cmd /usr/bin/virtctl version >/dev/null 2>&1 || run_cmd /usr/bin/virtctl --help >/dev/null 2>&1; then
+	echo "  virtctl: present"
+else
+	fail "/usr/bin/virtctl is missing or cannot run"
 fi
 
 echo "==> checking /usr/bin/virtbench fio"
