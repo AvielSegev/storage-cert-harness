@@ -9,6 +9,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"io"
 	"log/slog"
 	"os"
 	"os/signal"
@@ -61,11 +62,23 @@ func newRootCmd() *cobra.Command {
 }
 
 func newLogger(verbose bool) *slog.Logger {
+	return newLoggerWithOutput(verbose, nil)
+}
+
+func newLoggerWithOutput(verbose bool, logOutput io.Writer) *slog.Logger {
+	return newLoggerTo(verbose, os.Stderr, logOutput)
+}
+
+func newLoggerTo(verbose bool, terminal io.Writer, logOutput io.Writer) *slog.Logger {
 	lvl := slog.LevelInfo
 	if verbose {
 		lvl = slog.LevelDebug
 	}
-	return slog.New(slog.NewTextHandler(os.Stderr, &slog.HandlerOptions{Level: lvl}))
+	output := terminal
+	if logOutput != nil {
+		output = io.MultiWriter(terminal, logOutput)
+	}
+	return slog.New(slog.NewTextHandler(output, &slog.HandlerOptions{Level: lvl}))
 }
 
 func newVersionCmd() *cobra.Command {
@@ -249,8 +262,25 @@ func newRunCmd() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "run",
 		Short: "Run selected certification tests and emit a report",
-		RunE: func(cmd *cobra.Command, _ []string) error {
-			logger := newLogger(verbose)
+		RunE: func(cmd *cobra.Command, _ []string) (runErr error) {
+			var logFile *os.File
+			var err error
+			if outputDir != "" {
+				if err := os.MkdirAll(outputDir, 0o755); err != nil {
+					return err
+				}
+				logFile, err = os.Create(filepath.Join(outputDir, "run.log"))
+				if err != nil {
+					return err
+				}
+				defer func() {
+					if runErr != nil {
+						_, _ = fmt.Fprintf(logFile, "error: %v\n", runErr)
+					}
+					_ = logFile.Close()
+				}()
+			}
+			logger := newLoggerWithOutput(verbose, logFile)
 			resolved, err := configureExecution(cmd, &cfg, planPath, backendsPath, &backendName, true, logger)
 			if err != nil {
 				return err
@@ -312,13 +342,7 @@ func newRunCmd() *cobra.Command {
 			if abs, err := filepath.Abs(workdir); err == nil {
 				workdir = abs
 			}
-			rc := &core.RunCtx{RunID: runID, WorkDir: workdir, Logger: logger, Backend: resolved}
-
-			if outputDir != "" {
-				if err := os.MkdirAll(outputDir, 0o755); err != nil {
-					return err
-				}
-			}
+			rc := &core.RunCtx{RunID: runID, WorkDir: workdir, Logger: logger, LogOutput: logFile, Backend: resolved}
 
 			// Resolve the prior report and self attestations before running cluster
 			// tests, so the human gate is the first run phase.
@@ -430,7 +454,7 @@ func newRunCmd() *cobra.Command {
 	cmd.Flags().StringVar(&cfg.WorkDir, "workdir", "", "working directory for run artifacts")
 	cmd.Flags().IntVar(&cfg.Concurrency, "concurrency", 1, "max tools run in parallel (respects per-tool parallel_safe/exclusivity_groups)")
 	cmd.Flags().StringSliceVar(&cfg.ExtraMetrics, "report-metric", nil, "add report metrics for each selected TR (name or name@percentile; repeat or comma-separate)")
-	cmd.Flags().StringVar(&outputDir, "output", "", "directory to write report.json / report.md")
+	cmd.Flags().StringVar(&outputDir, "output", "", "directory to write reports and run.log")
 	cmd.Flags().StringVar(&planPath, "plan", "", "path to a test plan (YAML); provides selection/concurrency/backend defaults")
 	cmd.Flags().StringVar(&backendsPath, "backends", "", "path to a backends file (YAML)")
 	cmd.Flags().StringVar(&backendName, "backend", "", "name of the active storage backend (overrides the plan)")

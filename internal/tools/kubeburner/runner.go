@@ -67,8 +67,8 @@ func (runner) Run(ctx context.Context, rc *core.RunCtx, bag *core.Bag, trs []cor
 	if err != nil {
 		return stages.RunHandle{}, err
 	}
-	cmd.Stdout = os.Stdout
-	cmd.Stderr = os.Stderr
+	cmd.Stdout = rc.ToolOutput(os.Stdout)
+	cmd.Stderr = rc.ToolOutput(os.Stderr)
 
 	rc.Logger.Info("kube-burner: running", "tr", tr.ID, "replicas", p.Replicas, "snapshot_count", p.SnapshotCount)
 	runErr := ""
