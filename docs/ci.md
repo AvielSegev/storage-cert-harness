@@ -35,7 +35,7 @@ ci/
     markdownlint-cli2.jsonc  # markdownlint-cli2 config (includes MD rule overrides)
     markdownlint.yaml    # markdownlint fallback config
     trivyignore          # accepted CVEs for Trivy
-    secret-scan-allowlist.txt  # exact-line false-positive overrides
+    secret-scan-allowlist.txt  # unused since ADR-0017 (numeric scan removed)
 VERSION / NEXT-VERSION               # harness binary semver
 IMAGE-VERSION / NEXT-IMAGE-VERSION   # container image tag semver
 ```
@@ -503,7 +503,7 @@ uploads `logs/*.log` when a job fails (not the README). GitHub does the same.
 | `lint-go.sh` | gofmt, go vet, golangci-lint (config from `ci/config/golangci.yml`) |
 | `unittest.sh` | **Unit tests only** (`go test ./...`). GitLab job `unittest`. |
 | `build.sh` | `bin/harness` with `binary_version()` ldflags |
-| `secret-scan.sh` | thresholds/reports; SLA-like numerics in the MR diff; editor/workspace tokens |
+| `secret-scan.sh` | tracked reports (`report.json`/`.md`); editor/workspace tokens; gitleaks |
 | `supply-chain.sh` | vendor/`go list`, govulncheck, gosec, `trivy fs`. **CI allow-failure** until [ECOPROJECT-5419](https://redhat.atlassian.net/browse/ECOPROJECT-5419). |
 | `replay-smoke.sh` | `harness validate` + `run` with example catalog/plan (no cluster). GitLab: **manual**. GitHub: skipped (opt-in via `CI_RUN_REPLAY_SMOKE`). |
 | `image-build.sh` | `linux/amd64` Containerfile → `dist/harness-image.tar` (no push). Local: **podman**. |
@@ -529,37 +529,17 @@ report paths.
 
 ## Secret scan
 
-Fails if git would contain real `thresholds.json`, harness `report.json` /
-`report.md`, or tracked VS Code / `*.code-workspace` / `.cursor` / `.devcontainer`
-/ `.env` files with API key or token env vars (`glpat-`, `ghp_`, `sk-`, …).
+SLA thresholds are public (ADR-0017), so the scan no longer refuses
+`thresholds.json` or hunts for SLA-like numeric literals in code/plans/fixtures.
+It now has two gates:
 
-It also inspects **every added line in the MR diff** under `internal/tools/`,
-`internal/grader/`, `plans/`, `fixtures/`, and `**/testdata/**`, **including**
-`*_test.go` (the spec names `fixtures`; parser goldens live under `testdata/`
-today). Floats and standalone 3+ digit integers (`:=8080`, JSON `{"threshold":250}`)
-look like copy-pasted SLA bars; gate values belong only in the private KB. On
-failure the log prints `file:line`, the added line, the leftover after stripping,
-and the matched token.
+- **Tracked reports:** fails if git would contain a harness `report.json` /
+  `report.md` (they can carry graded numbers).
+- **Editor/workspace tokens:** fails on tracked VS Code / `*.code-workspace` /
+  `.cursor` / `.devcontainer` / `.env` files with API key or token env vars
+  holding real-looking values (`glpat-`, `ghp_`, `sk-`, `AKIA`, JWT, …).
 
-Automatically ignored: container image refs (`quay.io/…:v2.8.1`), semver / `vX.Y.Z`
-tags, `go1.N`, Go octal modes, `Ki`/`Mi`/`Gi` sizes, percentile keys (`p50`/`p99`),
-TR/ADR/Jira ids, UUIDs, URLs, ISO dates. Testdata/fixtures JSON that is tool output
-(no `sla`/`threshold` keys) is treated as measurements, not gates.
-
-**False-positive override:** put `secret-scan:ok` on the numeric line or the
-previous line (ports, retry counts, fake gates in unit tests). Aliases:
-`allow-numeric`, `ignore-gate`, `no-gate`, `nosecret`.
-
-```go
-port := 8080 // secret-scan:ok
-retries:=1000 // allow-numeric
-// ignore-gate
-limit := 250
-```
-
-JSON and other uncommentable lines: exact-line entries in
-`ci/config/secret-scan-allowlist.txt` (reviewed only). Matcher regression:
-`./ci/scripts/secret-scan.sh --self-test`.
+If installed, `gitleaks` also runs over the working tree.
 
 ## Testing
 

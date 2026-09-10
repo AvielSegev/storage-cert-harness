@@ -67,7 +67,7 @@ func TestParseResults_Golden(t *testing.T) {
 		{Name: MetricSnapshotRequestedCount, Value: 3, Unit: "count"},
 		{Name: MetricSnapshotReadyCount, Value: 3, Unit: "count"},
 		{Name: MetricSnapshotFailedCount, Value: 0, Unit: "count"},
-		{Name: MetricSnapshotSuccessRate, Value: 100, Unit: "%"}, // secret-scan:ok percentage measurement, not an SLA
+		{Name: MetricSnapshotSuccessRate, Value: 100, Unit: "%"},
 		{Name: MetricSnapshotBatchCompletionTime, Value: 1, Unit: "s"},
 	} {
 		if !slices.Contains(res.Metrics, want) {
@@ -194,7 +194,7 @@ func TestParseResults_AggregatesSnapshotBatchElapsedTime(t *testing.T) {
 	for _, want := range []core.Metric{
 		{Name: MetricSnapshotReadyCount, Value: 5, Unit: "count"},
 		{Name: MetricSnapshotFailedCount, Value: 0, Unit: "count"},
-		{Name: MetricSnapshotSuccessRate, Value: 100, Unit: "%"}, // secret-scan:ok percentage measurement, not an SLA
+		{Name: MetricSnapshotSuccessRate, Value: 100, Unit: "%"},
 	} {
 		if !slices.Contains(res.Metrics, want) {
 			t.Errorf("missing metric %+v in %+v", want, res.Metrics)
@@ -432,7 +432,7 @@ func TestEvaluator_GradesP99(t *testing.T) {
 		t.Errorf("verdict=%s (%s), want pass", vs[1].Outcome, vs[1].Reason)
 	}
 	if vs[0].Item != "native:jobs_passed" ||
-		vs[0].Actual != "requested=3 ready=3 failed=0 success_rate=100% batch_completion_time=1s" { // secret-scan:ok measured success rate, not an SLA
+		vs[0].Actual != "requested=3 ready=3 failed=0 success_rate=100% batch_completion_time=1s" {
 		t.Errorf("batch verdict = %+v, want measured batch summary", vs[0])
 	}
 }

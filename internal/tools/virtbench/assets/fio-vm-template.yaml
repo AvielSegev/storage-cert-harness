@@ -1,4 +1,4 @@
-# Derived from portworx/kubevirt-benchmark v2.0.0 under Apache-2.0. secret-scan:ok
+# Derived from portworx/kubevirt-benchmark v2.0.0 under Apache-2.0.
 # This harness-owned profile requests the exact latency percentile required by
 # the FIO parser. Other VM settings match the upstream template.
 apiVersion: kubevirt.io/v1
@@ -99,7 +99,7 @@ spec:
               runcmd:
                 - systemctl enable --now qemu-guest-agent
                 - |
-                  # secret-scan:ok - scratch disk selection size, not a certification threshold.
+                  # scratch disk selection size.
                   SCRATCH=$(lsblk -dnbo NAME,SIZE | awk '$2 > 40000000000 {print $1}' | head -1)
                   if [ -n "$SCRATCH" ]; then
                     mkfs.xfs -f /dev/$SCRATCH

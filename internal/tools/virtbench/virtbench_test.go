@@ -316,7 +316,7 @@ func TestScenarioEvaluatorNativeFail(t *testing.T) {
 }
 
 func TestScenarioEvaluatorLabelsFIOFleetP99(t *testing.T) {
-	limit := 5.0 // secret-scan:ok - synthetic unit-test gate, not a certification threshold.
+	limit := 5.0
 	tr := core.TestRequirement{ID: "TR-STOR-002", AutomationTool: "virtbench fio", SLAStatus: core.StatusDefined, SLAs: []core.SLA{{
 		Metric: "read_latency", Operator: "<=", Value: &limit, Unit: "ms", Percentile: "p99", MeasuredBy: []string{"virtbench fio"},
 	}}}
@@ -452,7 +452,7 @@ func TestBuildArgsFIO(t *testing.T) {
 		"--start 1 --end 1",
 		"--vm-template ",
 		"--fio-rw randrw --fio-bs 4k",
-		"--fio-runtime 600", // secret-scan:ok - workload duration, not a certification threshold.
+		"--fio-runtime 600",
 		"--results-dir " + resultsDir,
 		"--cleanup",
 	} {
@@ -476,7 +476,7 @@ func TestBuildArgsFIO(t *testing.T) {
 	for _, want := range []string{
 		"--start 1 --end 40",
 		"--concurrency 40",
-		"--fio-runtime 600", // secret-scan:ok - workload duration, not a certification threshold.
+		"--fio-runtime 600",
 	} {
 		if !strings.Contains(joined, want) {
 			t.Errorf("fleet fio args missing %q; got %q", want, joined)
@@ -500,7 +500,7 @@ func TestFIOActionArgs(t *testing.T) {
 }
 
 func TestFIOWaitAndCollectionSettings(t *testing.T) {
-	tr := core.TestRequirement{Params: map[string]any{"fio_runtime": 600}} // secret-scan:ok - test workload setting, not a certification threshold.
+	tr := core.TestRequirement{Params: map[string]any{"fio_runtime": 600}}
 	timeout, err := fioVMReadyTimeout(tr)
 	if err != nil || timeout != 10*time.Minute {
 		t.Errorf("default ready timeout = %s, %v; want 10m, nil", timeout, err)
@@ -509,7 +509,7 @@ func TestFIOWaitAndCollectionSettings(t *testing.T) {
 	if err != nil || retries != 32 || delay != 20 {
 		t.Errorf("collection settings = %d, %d, %v; want 32, 20, nil", retries, delay, err)
 	}
-	tr.Params["vm_ready_timeout"] = 1200 // secret-scan:ok - test readiness timeout, not a certification threshold.
+	tr.Params["vm_ready_timeout"] = 1200
 	tr.Params["fio_collect_retries"] = 40
 	tr.Params["fio_collect_retry_delay"] = 15
 	timeout, err = fioVMReadyTimeout(tr)
@@ -570,7 +570,7 @@ func TestFIOPlansUseConfiguredVMCount(t *testing.T) {
 		readyTimeout time.Duration
 	}{
 		{name: "virtbench-fio-live-smoke.yaml", vmCount: 1, runtime: 30, readyTimeout: 10 * time.Minute},
-		{name: "virtbench-fio-concurrent.yaml", vmCount: 40, concurrency: 40, runtime: 600, readyTimeout: 20 * time.Minute}, // secret-scan:ok - workload duration, not a certification threshold.
+		{name: "virtbench-fio-concurrent.yaml", vmCount: 40, concurrency: 40, runtime: 600, readyTimeout: 20 * time.Minute},
 	} {
 		p, err := plan.Load(filepath.Join("..", "..", "..", "plans", tc.name))
 		if err != nil {

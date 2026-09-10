@@ -23,23 +23,17 @@ the "why".
 
 ## Critical rules
 
-1. **Never commit real SLA numbers in the clear.** Only the fake
-   `thresholds.example.json` + JSON Schemas are tracked; the real
-   `thresholds.json` is gitignored. Real numbers will live only in an encrypted
-   folder (ADR-0004). Assume this repo goes public — nothing secret in history,
-   ever (ADR-0002). Backend credentials are **references** (file / k8s Secret /
+1. **SLA thresholds are public (ADR-0017).** Real `thresholds.json` may be
+   committed alongside `catalog.json`; gate numbers in code, plans, fixtures,
+   and tests are no longer secret and are no longer scanned. (Historical:
+   ADR-0004 treated them as encrypted-in-repo secrets; ADR-0017 supersedes it.)
+   Backend credentials remain **references** (file / k8s Secret /
    inline-dev-only), never committed plaintext; only `backends.example.yaml`
    with fake values is tracked (ADR-0005). Resolved secret values live only in
    memory and are never logged or written to the report.
-   CI **secret-scan** will fail if a numeric literal appears in `internal/tools/`
-   (also `internal/grader/`, `plans/`, `fixtures/`, tests, and testdata) — gate
-   values belong only in the private KB. Image tags and semver are ignored.
-   Tight assignments (`:=8080`, JSON `:250`) are in scope. Legitimate constants
-   (ports, retry counts, fake gates in unit tests) mark the line or the previous
-   line with `secret-scan:ok` (aliases: `allow-numeric`, `ignore-gate`, `no-gate`,
-   `nosecret`). Uncommentable false positives go in `ci/secret-scan-allowlist.txt`.
-   Failure logs print `file:line`, the matched token, and this override path
-   (`./ci/secret-scan.sh --self-test` checks the matcher).
+   CI **secret-scan** now covers only run reports and token-shaped credentials:
+   it refuses tracked `report.json` / `report.md` (graded numbers) and flags
+   `glpat-`/`ghp_`/`sk-`/`AKIA`/JWT-shaped values in editor/workspace files.
 2. **The core never imports a concrete tool.** `internal/{orchestrator,grader,
    report,registry}` depend only on the stage interfaces in `internal/stages`.
    Tools live under `internal/tools/<tool>/` and register themselves.
@@ -76,7 +70,7 @@ the "why".
 | `schemas/` | JSON Schemas (v2.0) for catalog, thresholds, report, plan, backends |
 | `decisions/` | ADRs (`NNNN-*.md`, `template.md`) |
 | `docs/` | Architecture + adapter-authoring + contributing + CI |
-| `secrets/` | Future encrypted SLA folder (ADR-0004) |
+| `secrets/` | Obsolete encrypted SLA folder (ADR-0004, superseded by ADR-0017) |
 | `ci/scripts/` | Portable CI job scripts (`ci-utils.sh`, `build.sh`, `lint-*.sh`, …) |
 | `ci/config/` | Linter configs, image pins, allowlists (`images.env`, `golangci.yml`, …) |
 | `VERSION` | Last binary version released from main |
@@ -127,4 +121,6 @@ Propose → review via PR → mark Accepted. Current: 0001 Go, 0002 repo+SDLC,
 0008 multi-scenario tool table + unit-normalized grading, 0009 scoped setup
 (run/group/individual), 0010 CI scripts (GitLab + GitHub + pre-commit),
 0011 harness ships as a container image (Quay), 0012 kube-burner generic
-config + snapshot tool, 0013 virtbench node-drain / VM-evacuation (TR-VIRT-008).
+config + snapshot tool, 0013 virtbench node-drain / VM-evacuation (TR-VIRT-008),
+0014 report model + exporters, 0015 continue-from-merge + attestations,
+0016 named plan variants, 0017 thresholds are public (supersedes 0004).

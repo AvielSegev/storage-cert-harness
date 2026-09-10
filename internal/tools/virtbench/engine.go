@@ -57,7 +57,7 @@ const (
 
 // teardownBudget bounds the best-effort cleanup, which runs on a fresh context so
 // it still happens when the run ctx was cancelled.
-const teardownBudget = 120 * time.Second // secret-scan:ok  seconds; cleanup must run even when the run ctx is cancelled
+const teardownBudget = 120 * time.Second
 
 // --- Preflight ---------------------------------------------------------------
 
@@ -494,11 +494,10 @@ func stageTemplate(resultsRoot, tmpl string) (string, error) {
 	return filepath.Abs(dst)
 }
 
-// secret-scan:ok - FIO runtime is a workload setting, not a certification threshold.
 const defaultFIORuntime = 600
 
 const (
-	defaultFIOVMReadyTimeout   = 600 // secret-scan:ok - readiness timeout, not a certification threshold.
+	defaultFIOVMReadyTimeout   = 600
 	defaultFIOCollectRetries   = 8
 	defaultFIOCollectRetryWait = 20
 	defaultFIOVMName           = "fio-vm"
