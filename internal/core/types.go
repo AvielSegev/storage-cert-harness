@@ -5,6 +5,7 @@ package core
 
 import (
 	"encoding/json"
+	"io"
 	"log/slog"
 )
 
@@ -283,10 +284,23 @@ type RunCtx struct {
 	RunID   string
 	WorkDir string
 	Logger  *slog.Logger
+	// LogOutput receives subprocess stdout/stderr when the CLI is configured to
+	// persist a complete run log. It is deliberately not part of the report.
+	LogOutput io.Writer
 	// Backend is the active storage array configuration for this run, with its
 	// secrets already resolved. It is optional (may be nil / empty). See
 	// decisions/0005.
 	Backend *ResolvedBackend
+}
+
+// ToolOutput mirrors a subprocess stream to the terminal and, when configured,
+// to the run log. A nil receiver or LogOutput keeps the existing terminal-only
+// behavior used by tests and non-CLI callers.
+func (r *RunCtx) ToolOutput(terminal io.Writer) io.Writer {
+	if r == nil || r.LogOutput == nil {
+		return terminal
+	}
+	return io.MultiWriter(terminal, r.LogOutput)
 }
 
 // ExecutionLabel distinguishes named executions while preserving catalog TR IDs.

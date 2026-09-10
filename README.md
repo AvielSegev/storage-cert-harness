@@ -22,6 +22,27 @@ make build
 never committed in the clear (see below) and are supplied at run time via
 `--thresholds <path>` or `HARNESS_THRESHOLDS`.
 
+## Run artifacts
+
+Pass the same writable directory to `--workdir` and `--output` when collecting
+results for submission:
+
+```sh
+./bin/harness run \
+  --catalog /path/to/catalog.json \
+  --thresholds /path/to/thresholds.json \
+  --backends /path/to/backends.yaml \
+  --workdir ./out/certification-run \
+  --output ./out/certification-run \
+  --verbose
+```
+
+The output directory contains `report.junit.xml`, `report.json`, `report.md`,
+and `run.log`. `run.log` contains harness log messages and stdout/stderr from
+the kube-burner and kube-burner-ocp subprocesses. virtbench output is included
+through the harness logger. Submit `report.junit.xml` and `run.log` together;
+the work directory also contains the tool-generated result artifacts.
+
 ## How it works
 
 Ports-and-adapters. The KB export **v2.0 two-file contract** drives a run —

@@ -75,8 +75,8 @@ func (runner) Run(ctx context.Context, rc *core.RunCtx, bag *core.Bag, trs []cor
 			runs[i].RunErr = err.Error()
 			continue
 		}
-		cmd.Stdout = os.Stdout
-		cmd.Stderr = os.Stderr
+		cmd.Stdout = rc.ToolOutput(os.Stdout)
+		cmd.Stderr = rc.ToolOutput(os.Stderr)
 		cmds[i] = cmd
 		runs[i].Subdir = subdir
 	}
